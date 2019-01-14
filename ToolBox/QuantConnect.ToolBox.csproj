@@ -181,6 +181,7 @@
     <Compile Include="IEX\IEXDownloaderProgram.cs" />
     <Compile Include="IVolatilityEquityConverter\IVolatilityEquityConverterProgram.cs" />
     <Compile Include="Program.cs" />
+    <Compile Include="RandomDataGenerator\RandomDataProgram.cs" />
     <Compile Include="TickAggregator.cs" />
     <Compile Include="AlgoSeekFuturesConverter\AlgoSeekFuturesConverter.cs" />
     <Compile Include="AlgoSeekFuturesConverter\AlgoSeekFuturesProcessor.cs" />

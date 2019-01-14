@@ -41,7 +41,13 @@ namespace QuantConnect.Configuration
                                                                                    + " NseMarketDataConverter, QuantQuoteConverter]"),
                 new CommandLineOption("destination-dir", CommandOptionType.SingleValue, "[REQUIRED for IVolatilityEquityConverter, "
                                                                                         + "NseMarketDataConverter, QuantQuoteConverter]"),
-                new CommandLineOption("source-meta-dir", CommandOptionType.SingleValue, "[REQUIRED for IVolatilityEquityConverter]")
+                new CommandLineOption("source-meta-dir", CommandOptionType.SingleValue, "[REQUIRED for IVolatilityEquityConverter]"),
+                new CommandLineOption("asset-count", CommandOptionType.SingleValue, "[REQUIRED for RandomDataGenerator]"),
+                new CommandLineOption("density", CommandOptionType.SingleValue, "[OPTIONAL for RandomDataGenerator] Defaults to \"dense\""),
+                new CommandLineOption("instrument", CommandOptionType.SingleValue, "[OPTIONAL for RandomDataGenerator] Defaults to \"equity\""),
+                new CommandLineOption("include-coarse", CommandOptionType.SingleValue, "[OPTIONAL for RandomDataGenerator] Defaults to \"no\""),
+                new CommandLineOption("market", CommandOptionType.SingleValue, "[OPTIONAL for RandomDataGenerator] Defaults to \"usa\""),
+                new CommandLineOption("right", CommandOptionType.SingleValue, "[OPTIONAL for RandomDataGenerator] Defaults to \"call\""),
             };
 
         /// <summary>

@@ -36,6 +36,7 @@ using QuantConnect.ToolBox.NseMarketDataConverter;
 using QuantConnect.ToolBox.OandaDownloader;
 using QuantConnect.ToolBox.QuandlBitfinexDownloader;
 using QuantConnect.ToolBox.QuantQuoteConverter;
+using QuantConnect.ToolBox.RandomDataGenerator;
 using QuantConnect.ToolBox.YahooDownloader;
 using QuantConnect.Util;
 
@@ -123,6 +124,16 @@ namespace QuantConnect.ToolBox
             }
             else
             {
+                var toDate = optionsObject.ContainsKey("to-date") ?
+                    DateTime.ParseExact(optionsObject["to-date"].ToString(), "yyyyMMdd-HH:mm:ss", CultureInfo.InvariantCulture) :
+                    DateTime.UtcNow;
+                var density = optionsObject.ContainsKey("density") ? optionsObject["density"].ToString() : "dense";
+                var resolution = optionsObject.ContainsKey("resolution") ? optionsObject["resolution"].ToString() : "Minute";
+                var instrument = optionsObject.ContainsKey("instrument") ? optionsObject["instrument"].ToString() : "equity";
+                var includeCoarse = optionsObject.ContainsKey("include-coarse") ? optionsObject["include-coarse"].ToString() : "yes";
+                var market = optionsObject.ContainsKey("market") ? optionsObject["market"].ToString() : "usa";
+                var right = optionsObject.ContainsKey("right") ? optionsObject["right"].ToString() : "call";
+
                 switch (targetApp)
                 {
                     case "asfc":
@@ -160,6 +171,19 @@ namespace QuantConnect.ToolBox
                     case "coarseuniversegenerator":
                         CoarseUniverseGeneratorProgram.CoarseUniverseGenerator();
                         break;
+                    case "rdg":
+                    case "randomdatagenerator":
+                        RandomDataGeneratorProgram.RandomDataGenerator(DateTime.ParseExact(GetParameterOrExit(optionsObject, "from-date"), "yyyyMMdd-HH:mm:ss", CultureInfo.InvariantCulture),
+                                                                       toDate,
+                                                                       density,
+                                                                       resolution,
+                                                                       instrument,
+                                                                       includeCoarse,
+                                                                       market,
+                                                                       right,
+                                                                       GetParameterOrExit(optionsObject, "asset-count"));
+                        break;
+
                     default:
                         PrintMessageAndExit(1, "ERROR: Unrecognized --app value");
                         break;
