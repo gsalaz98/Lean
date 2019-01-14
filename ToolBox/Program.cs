@@ -132,7 +132,6 @@ namespace QuantConnect.ToolBox
                 var instrument = optionsObject.ContainsKey("instrument") ? optionsObject["instrument"].ToString() : "equity";
                 var includeCoarse = optionsObject.ContainsKey("include-coarse") ? optionsObject["include-coarse"].ToString() : "yes";
                 var market = optionsObject.ContainsKey("market") ? optionsObject["market"].ToString() : "usa";
-                var right = optionsObject.ContainsKey("right") ? optionsObject["right"].ToString() : "call";
 
                 switch (targetApp)
                 {
@@ -180,7 +179,6 @@ namespace QuantConnect.ToolBox
                                                                        instrument,
                                                                        includeCoarse,
                                                                        market,
-                                                                       right,
                                                                        GetParameterOrExit(optionsObject, "asset-count"));
                         break;
 

@@ -34,6 +34,8 @@ namespace QuantConnect.ToolBox.RandomDataGenerator
     /// </remarks>
     public static class RandomDataGeneratorProgram
     {
+        private static string _dataDirectory = Config.Get("data-directory", "../../../Data");
+
         private static DateTime _fromDate;
         private static DateTime _toDate;
 
@@ -42,7 +44,6 @@ namespace QuantConnect.ToolBox.RandomDataGenerator
         private static string _density;
         private static Resolution _resolution;
         private static int _granularity;
-        private static OptionRight _right;
 
         private static bool _includeCoarse;
         
@@ -56,19 +57,15 @@ namespace QuantConnect.ToolBox.RandomDataGenerator
         /// <param name="instrument">Financial instrument</param>
         /// <param name="includeCoarse">Generate Daily resolution data and calls <see cref="CoarseUniverseGeneratorProgram.CoarseUniverseGenerator" /></param>
         /// <param name="market">Market name, such as USA, GDAX, Oanda, FXCM, etc.</param>
-        /// <param name="right">Option right, e.g. call, put</param>
         /// <param name="assetCount">Number of fake assets to generate</param>
-        public static void RandomDataGenerator(DateTime fromDate, DateTime toDate, string density, string resolution, string instrument, string includeCoarse, string market, string right, string assetCount)
+        public static void RandomDataGenerator(DateTime fromDate, DateTime toDate, string density, string resolution, string instrument, string includeCoarse, string market, string assetCount)
         {
-            var dataDirectory = Config.Get("data-directory", "../../../Data");
-
             _fromDate = fromDate;
             _toDate = toDate;
             _market = market;
             _density = density;
             _resolution = (Resolution)Enum.Parse(typeof(Resolution), resolution);
             _granularity = (int)_resolution.ToTimeSpan().TotalSeconds;
-            _right = right == "call" ? OptionRight.Call : OptionRight.Put;
             _includeCoarse = includeCoarse == "yes" ? true : false;
 
             bool isTradeBar = false;
@@ -83,11 +80,6 @@ namespace QuantConnect.ToolBox.RandomDataGenerator
             if (density != "sparse" && density != "dense")
             {
                 Console.WriteLine("Error: Unknown option for \"density\". Valid values are: \"sparse, dense\"");
-                Environment.Exit(1);
-            }
-            if (right != "call" && right != "put")
-            {
-                Console.WriteLine("Error: Argument \"right\" must be either \"call\" or \"put\"");
                 Environment.Exit(1);
             }
             if (instrument == "option" && _resolution != Resolution.Minute)
@@ -145,44 +137,66 @@ namespace QuantConnect.ToolBox.RandomDataGenerator
             {
                 if (isTradeBar)
                 {
-                    Symbol fakeSymbolObject = CreateSymbol(fakeSymbol, dateTimeEnumerable);
-                    var tradeBarData = TickGenerator(fakeSymbolObject, TickType.Trade, dateTimeEnumerable);
-
-                    var consolidatedData = new List<BaseData>();
-                    var barConsolidator = TradeBarConsolidator.FromResolution(Resolution.Daily);
-                    // Append consolidated TradeBars into a List so that we can write it to disk
-                    barConsolidator.DataConsolidated += (sender, bar) =>
+                    if (_marketType != SecurityType.Option)
                     {
-                        consolidatedData.Add(bar);
-                    };
+                        Symbol fakeSymbolObject = CreateSymbol(fakeSymbol, dateTimeEnumerable);
 
-                    var writer = new LeanDataWriter(_resolution, fakeSymbolObject, dataDirectory, TickType.Trade);
-                    writer.Write(tradeBarData);
+                        var tradeBarData = TickGenerator(fakeSymbolObject, TickType.Trade, dateTimeEnumerable);
 
-                    // Converts TradeBars to Daily resolution using TradeBarConsolidator
-                    if (_includeCoarse && _marketType == SecurityType.Equity)
+                        var consolidatedData = new List<BaseData>();
+                        var barConsolidator = TradeBarConsolidator.FromResolution(Resolution.Daily);
+                        // Append consolidated TradeBars into a List so that we can write it to disk
+                        barConsolidator.DataConsolidated += (sender, bar) =>
+                        {
+                            consolidatedData.Add(bar);
+                        };
+
+                        var writer = new LeanDataWriter(_resolution, fakeSymbolObject, _dataDirectory, TickType.Trade);
+                        writer.Write(tradeBarData);
+
+                        // Converts TradeBars to Daily resolution using TradeBarConsolidator
+                        if (_includeCoarse && _marketType == SecurityType.Equity)
+                        {
+                            tradeBarData.ToList().ForEach(x => barConsolidator.Update(x));
+
+                            var consolidatorWriter = new LeanDataWriter(Resolution.Daily, fakeSymbolObject, _dataDirectory, TickType.Trade);
+                            consolidatorWriter.Write(consolidatedData);
+                        }
+                    }
+                    else
                     {
-                        tradeBarData.ToList().ForEach(x => barConsolidator.Update(x));
-
-                        var consolidatorWriter = new LeanDataWriter(Resolution.Daily, fakeSymbolObject, dataDirectory, TickType.Trade);
-                        consolidatorWriter.Write(consolidatedData);
+                        WriteOptionData(fakeSymbol, TickType.Trade, dateTimeEnumerable);
                     }
                 }
                 if (isQuoteBar)
                 {
-                    var fakeSymbolObject = CreateSymbol(fakeSymbol, dateTimeEnumerable);
-                    var quoteBarData = TickGenerator(fakeSymbolObject, TickType.Quote, dateTimeEnumerable);
+                    if (_marketType != SecurityType.Option)
+                    {
+                        var fakeSymbolObject = CreateSymbol(fakeSymbol, dateTimeEnumerable);
+                        var quoteBarData = TickGenerator(fakeSymbolObject, TickType.Quote, dateTimeEnumerable);
 
-                    var writer = new LeanDataWriter(_resolution, fakeSymbolObject, dataDirectory, TickType.Quote);
-                    writer.Write(quoteBarData);
+                        var writer = new LeanDataWriter(_resolution, fakeSymbolObject, _dataDirectory, TickType.Quote);
+                        writer.Write(quoteBarData);
+                    }
+                    else
+                    {
+                        WriteOptionData(fakeSymbol, TickType.Quote, dateTimeEnumerable);
+                    }
                 }
                 if (isOpenInterest)
                 {
-                    var fakeSymbolObject = CreateSymbol(fakeSymbol, dateTimeEnumerable);
-                    var openInterestData = TickGenerator(fakeSymbolObject, TickType.OpenInterest, dateTimeEnumerable);
+                    if (_marketType != SecurityType.Option)
+                    {
+                        var fakeSymbolObject = CreateSymbol(fakeSymbol, dateTimeEnumerable);
+                        var openInterestData = TickGenerator(fakeSymbolObject, TickType.OpenInterest, dateTimeEnumerable);
 
-                    var writer = new LeanDataWriter(_resolution, fakeSymbolObject, dataDirectory, TickType.OpenInterest);
-                    writer.Write(openInterestData);
+                        var writer = new LeanDataWriter(_resolution, fakeSymbolObject, _dataDirectory, TickType.OpenInterest);
+                        writer.Write(openInterestData);
+                    }
+                    else
+                    {
+                        WriteOptionData(fakeSymbol, TickType.OpenInterest, dateTimeEnumerable);
+                    }
                 }
             }
             if (_includeCoarse && _marketType == SecurityType.Equity)
@@ -209,8 +223,8 @@ namespace QuantConnect.ToolBox.RandomDataGenerator
         /// </summary>
         /// <param name="fakeSymbol">Fake symbol name</param>
         /// <param name="dateTimeEnumerable">Enumerable to determine expiration dates of futures and options contracts</param>
-        /// <returns></returns>
-        private static Symbol CreateSymbol(string fakeSymbol, List<DateTime> dateTimeEnumerable)
+        /// <returns><see cref="Symbol"/></returns>
+        private static Symbol CreateSymbol(string fakeSymbol, List<DateTime> dateTimeEnumerable, OptionRight right = OptionRight.Call, decimal strikePrice = 250.0m)
         {
             if (_marketType == SecurityType.Future)
             {
@@ -218,7 +232,7 @@ namespace QuantConnect.ToolBox.RandomDataGenerator
             }
             else if (_marketType == SecurityType.Option)
             {
-                return Symbol.CreateOption(fakeSymbol, _market, OptionStyle.American, _right, 50.0m, dateTimeEnumerable[dateTimeEnumerable.Count - 1]);
+                return Symbol.CreateOption(fakeSymbol, _market, OptionStyle.American, right, strikePrice, dateTimeEnumerable[dateTimeEnumerable.Count - 1]);
             }
             else
             {
@@ -309,6 +323,25 @@ namespace QuantConnect.ToolBox.RandomDataGenerator
         }
 
         /// <summary>
+        /// Writes option data to disk
+        /// </summary>
+        /// <param name="fakeSymbol">Fake symbol</param>
+        /// <param name="tickType">Is Trade, Quote, or OpenInterest</param>
+        /// <param name="dateTimeEnumerable">Calculates expiry</param>
+        private static void WriteOptionData(string fakeSymbol, TickType tickType, List<DateTime> dateTimeEnumerable)
+        {
+            var optionsDataSymbol = CreateSymbol(fakeSymbol, dateTimeEnumerable, OptionRight.Call, 250.0m);
+            var callOptionsData = new List<BaseData>();
+            var putOptionsData = new List<BaseData>();
+            var writer = new LeanDataWriter(_resolution, optionsDataSymbol, _dataDirectory, tickType);
+
+            var optionSymbol = CreateSymbol(fakeSymbol, dateTimeEnumerable, OptionRight.Call, 50.0m);
+            callOptionsData.AddRange(TickGenerator(optionSymbol, TickType.Trade, dateTimeEnumerable));
+
+            writer.Write(callOptionsData);
+        }
+
+        /// <summary>
         /// Creates enumerable that allows <see cref="TickGenerator"/> to keep consistent <see cref="DateTime"/>
         /// entries for <see cref="TradeBar"/>, <see cref="QuoteBar"/>, and <see cref="OpenInterest"/> for the same asset.
         /// </summary>
@@ -341,7 +374,7 @@ namespace QuantConnect.ToolBox.RandomDataGenerator
         /// </summary>
         /// <param name="sigma">Standard deviation</param>
         /// <param name="mu">Mean of distribution</param>
-        /// <returns></returns>
+        /// <returns>Normally distributed random number</returns>
         private static decimal RandomNormal(double sigma, double mu)
         {
             var rand = new Random();

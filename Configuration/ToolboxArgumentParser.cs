@@ -47,7 +47,6 @@ namespace QuantConnect.Configuration
                 new CommandLineOption("instrument", CommandOptionType.SingleValue, "[OPTIONAL for RandomDataGenerator] Defaults to \"equity\""),
                 new CommandLineOption("include-coarse", CommandOptionType.SingleValue, "[OPTIONAL for RandomDataGenerator] Defaults to \"no\""),
                 new CommandLineOption("market", CommandOptionType.SingleValue, "[OPTIONAL for RandomDataGenerator] Defaults to \"usa\""),
-                new CommandLineOption("right", CommandOptionType.SingleValue, "[OPTIONAL for RandomDataGenerator] Defaults to \"call\""),
             };
 
         /// <summary>
