@@ -13,25 +13,25 @@
  * limitations under the License.
 */
 
+using System;
 using System.IO;
+using QuantConnect.Logging;
 
 namespace QuantConnect.ToolBox.PsychSignalDataConverter
 {
     public static class PsychSignalDataConverterProgram
     {
-        public static void PsychSignalDataConverter(string dataAbsolutePath, string chunkSize)
+        public static void PsychSignalDataConverter(string dataAbsolutePath)
         {
             if (!File.Exists(dataAbsolutePath))
             {
-                Console.Error($"Psychsignal data not found in path {dataAbsolutePath}");
-            }
-            int chunks;
-            if (!int.TryParse(chunkSize, out chunks))
-            {
-                throw 
+                Log.Error($"Psychsignal data not found in path {dataAbsolutePath}. Exiting...");
+                return;
             }
 
-            var parser = new PsychSignalDataReader(dataAbsolutePath)
+            if (!Directory.Exists(QuantConnect.Globals.DataFolder))
+
+            var parser = new PsychSignalDataReader(dataAbsolutePath);
         }
     }
 }
