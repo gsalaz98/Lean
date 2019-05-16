@@ -13,9 +13,11 @@
  * limitations under the License.
 */
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using QuantConnect.Logging;
 
 namespace QuantConnect.ToolBox.PsychSignalDataConverter
 {
@@ -25,7 +27,7 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
         private int _currentChunk;
         private StreamReader _reader;
         private List<string> _currentData = new List<string>();
-        private PsychSignalDataConverter _converter = new PsychSignalDataConverter();
+        private PsychSignalDataConverter _converter; 
 
         /// <summary>
         /// Processes and reads psychsignal data in chunks to avoid
@@ -35,10 +37,11 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
         /// </summary>
         /// <param name="filePath"></param>
         /// <param name="chunkSize"></param>
-        public PsychSignalDataReader(string filePath, int chunkSize = 100000)
+        public PsychSignalDataReader(string filePath, string alternativeDataFolder, SecurityType securityType = SecurityType.Equity, string market = "usa", int chunkSize = 100000)
         {
             _reader = new StreamReader(filePath);
             _chunkSize = chunkSize;
+            _converter = new PsychSignalDataConverter(alternativeDataFolder, securityType, market);
         }
 
         public void ReadData()
@@ -46,10 +49,21 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
             var header = _reader.ReadLine();
             var currentLine = _reader.ReadLine();
 
+            Log.Trace(header);
+            Log.Trace(currentLine);
+
             while (currentLine != string.Empty && currentLine != null)
             {
-                _converter.ProcessData(currentLine);
+                var successful = _converter.ProcessData(currentLine);
+
+                if (!successful)
+                {
+                    Log.Trace($"Failed at line: {_currentChunk}");
+                    return;
+                }
+
                 currentLine = _reader.ReadLine();
+                _currentChunk++;
             }
         }
     }
