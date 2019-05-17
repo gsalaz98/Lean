@@ -1,11 +1,11 @@
 ﻿/*
  * QUANTCONNECT.COM - Democratizing Finance, Empowering Individuals.
  * Lean Algorithmic Trading Engine v2.0. Copyright 2014 QuantConnect Corporation.
- * 
- * Licensed under the Apache License, Version 2.0 (the "License"); 
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -14,149 +14,103 @@
 */
 
 using System;
-using System.IO;
 using System.Collections.Generic;
-using System.Linq;
+using System.IO;
 using System.Text;
-using System.Threading.Tasks;
-using QuantConnect.Data;
-using QuantConnect.Data.Auxiliary;
+using System.Linq;
 using QuantConnect.Logging;
 
 namespace QuantConnect.ToolBox.PsychSignalDataConverter
 {
-    public class PsychSignalDataConverter
+    public static class PsychSignalDataConverter
     {
-        private Dictionary<Symbol, List<string>> _existingFiles = new Dictionary<Symbol, List<string>>();
-        private MapFileResolver _resolver;
-        private StreamWriter _writer;
-        private Symbol _previousSymbol;
-        private string _previousFilename;
-
-        private readonly string _alternativeDataPath;
-        private readonly string _market;
-        private readonly SecurityType _securityType;
-
         /// <summary>
-        /// Initializes the converter. Does a check to ensure that the alternative data directory exists, otherwise 
+        /// Iterate over the data, processing each data point before finally zipping the directories
         /// </summary>
-        /// <param name="alternativeDataPath"></param>
-        /// <param name="securityType"></param>
-        /// <param name="market"></param>
-        public PsychSignalDataConverter(string alternativeDataPath, SecurityType securityType, string market)
+        public static void Convert(string sourceFilePath)
         {
-            if (!Directory.Exists(alternativeDataPath))
+            var tickerFolders = new HashSet<string>();
+            var previousFilename = string.Empty;
+            var previousTicker = string.Empty;
+            var dataFolder = Path.Combine(Globals.DataFolder, "equity", Market.USA);
+            var sentimentFolder = Path.Combine(dataFolder, "alternative", "psychsignal");
+            var knownTickerFolder = Path.Combine(dataFolder, "daily");
+            StreamWriter writer = null;
+
+            var knownTickers = from zipFile in Directory.GetFiles(knownTickerFolder)
+                               where zipFile.EndsWith(".zip")
+                               select Path.GetFileNameWithoutExtension(zipFile).ToUpper();
+
+            foreach (var currentLine in File.ReadLines(sourceFilePath))
             {
-                Log.Error($"Alternative data directory for psychsignal not found. Create the following path and try again: {alternativeDataPath}");
-                Console.ReadKey();
-                Environment.Exit(-1);
+                if (currentLine.StartsWith("SOURCE"))
+                {
+                    continue;
+                }
+
+                var csv = currentLine.Split(',');
+
+                var source = csv[0];
+                var ticker = csv[1];
+
+                if (!knownTickers.Contains(ticker))
+                {
+                    continue;
+                }
+                if (!tickerFolders.Contains(ticker))
+                {
+                    Directory.CreateDirectory(Path.Combine(sentimentFolder, ticker.ToLower()));
+                    tickerFolders.Add(ticker);
+                }
+
+                DateTime ts;
+                if (!DateTime.TryParse(csv[2], out ts))
+                {
+                    Log.Error($"Failed to parse timestamp: {csv[2]}");
+                    continue;
+                }
+
+                var tsFormatted = ts.ToString("yyyyMMdd");
+                var csvFilename = tsFormatted + ".csv";
+                var dataFilePath = Path.Combine(sentimentFolder, ticker, csvFilename);
+
+                // Avoids having to re-open the file every time we want to write to it
+                if (previousFilename != csvFilename || previousTicker != ticker)
+                {
+                    // Is null on first run
+                    writer?.Close();
+                    writer = new StreamWriter(dataFilePath, true, Encoding.UTF8, 65536);
+                }
+
+                // SOURCE[0],SYMBOL[1],TIMESTAMP_UTC[2],BULLISH_INTENSITY[3],BEARISH_INTENSITY[4],BULL_MINUS_BEAR[5],BULL_SCORED_MESSAGES[6],BEAR_SCORED_MESSAGES[7],BULL_BEAR_MSG_RATIO[8],TOTAL_SCANNED_MESSAGES[9]
+                writer.WriteLine(ToCsv(tsFormatted, csv[3], csv[4], csv[6], csv[7], csv[9]));
+
+                previousTicker = ticker;
+                previousFilename = csvFilename;
             }
 
-            _alternativeDataPath = alternativeDataPath;
-            _securityType = securityType;
-            _market = market;
-            _resolver = new LocalDiskMapFileProvider().Get(market);
+            foreach (var tickerFolder in Directory.GetDirectories(sentimentFolder))
+            {
+                foreach (var dataFile in Directory.GetFiles(tickerFolder))
+                {
+                    Compression.Zip(dataFile);
+                }
+            }
         }
 
         /// <summary>
-        /// Process the data into LEAN format, then write it to disk (append)
+        /// Converts line of psychsignal data to LEAN's csv format
         /// </summary>
-        /// <param name="data"></param>
-        public bool ProcessData(string data)
+        /// <param name="ts">Timestamp as a string to use for filename</param>
+        /// <param name="bullIntensity">Bull intensity</param>
+        /// <param name="bearIntensty">Bear intensity</param>
+        /// <param name="bullScoredMessages">Bullish message count</param>
+        /// <param name="bearScoredMessages">Bearish message count</param>
+        /// <param name="totalScoredMessages">Total messages scanned</param>
+        /// <returns></returns>
+        public static string ToCsv(string ts, string bullIntensity, string bearIntensty, string bullScoredMessages, string bearScoredMessages, string totalScoredMessages)
         {
-            var csv = data.Split(',');
-
-            var source = csv[0];
-            var ticker = csv[1];
-
-            // A field with the header names exists around lines 1388700-1388900.
-            // Screen out by checking for a header value.
-            if (source == "SOURCE")
-            {
-                return true;
-            }
-
-            DateTime ts;
-            decimal bullIntensity;
-            decimal bearIntensity;
-            int bullScoredMessages;
-            int bearScoredMessages;
-
-            if (!DateTime.TryParse(csv[2], out ts))
-            {
-                Log.Error($"Failed to parse timestamp: {csv[2]}");
-                return false;
-            }
-            if (!decimal.TryParse(csv[3], out bullIntensity))
-            {
-                Log.Error($"Failed to parse bull intensity: {csv[3]}");
-                return false;
-            }
-            if (!decimal.TryParse(csv[4], out bearIntensity))
-            {
-                Log.Error($"Failed to parse bear intensity: {csv[4]}");
-                return false;
-            }
-            if (!int.TryParse(csv[6], out bullScoredMessages))
-            {
-                Log.Error($"Failed to parse bull scored messages: {csv[6]}");
-                return false;
-            }
-            if(!int.TryParse(csv[7], out bearScoredMessages))
-            {
-                Log.Error($"Failed to parse bear scored messages: {csv[7]}");
-                return false;
-            }
-            // Screen for: futures, forex, cryptocurrencies, sector names, and non-US exchange symbols
-            if (ticker.Contains(".") || ticker.Contains("_") || ticker.Length > 5)
-            {
-                return true;
-            }
-
-            var symbol = Symbol.Create(ticker, _securityType, _market);
-            var csvFilename = ts.ToString("yyyyMMdd") + "_" + ticker.ToLower() + ".csv";
-            var dataFilePath = Path.Combine(_alternativeDataPath, ticker, csvFilename);
-
-            if (!_existingFiles.ContainsKey(symbol))
-            {
-                _existingFiles.Add(symbol, new List<string>() {
-                    dataFilePath
-                });
-            }
-            else
-            {
-                _existingFiles[symbol].Add(dataFilePath);
-            }
-            // Avoids having to re-open the file every time we want to write to it
-            if (_previousFilename != csvFilename || _previousSymbol != symbol)
-            {
-                // Is null on first run
-                _writer?.Close();
-                _writer = new StreamWriter(dataFilePath, true, Encoding.UTF8, 65536);
-            }
-
-            _writer.WriteLine(ToCsv(ts, bullIntensity, bearIntensity, bullScoredMessages, bearScoredMessages));
-
-            _previousSymbol = symbol;
-            _previousFilename = csvFilename;
-
-            return true;
-        }
-
-        /// <summary>
-        /// Converts the data into CSV. A few fields are excluded because we can calculate them ourselves.
-        /// The fields removed are: bull_minus_bear, bull_bear_message_ratio
-        /// </summary>
-        /// <param name="ts">Data timestamp</param>
-        /// <param name="bullIntensity">Bull intensity data</param>
-        /// <param name="bearIntensity">Bear intensity data</param>
-        /// <param name="bullScoredMessages">Bull scored messages data</param>
-        /// <param name="bearScoredMessages">Bear scored messages data</param>
-        /// <returns>CSV formatted data</returns>
-        public string ToCsv(DateTime ts, decimal bullIntensity, decimal bearIntensity, int bullScoredMessages, int bearScoredMessages, int totalScannedMessages)
-        {
-            var secondsSinceMidnight = ts.Subtract(ts.Date).TotalSeconds;
-            return $"{secondsSinceMidnight},{bullIntensity},{bearIntensity},{bullScoredMessages},{bearScoredMessages},{totalScannedMessages}";
+            return $"{ts},{bullIntensity},{bearIntensty},{bullScoredMessages},{bearScoredMessages},{totalScoredMessages}";
         }
     }
 }

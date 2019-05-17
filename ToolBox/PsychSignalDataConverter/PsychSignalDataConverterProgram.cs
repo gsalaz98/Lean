@@ -13,19 +13,23 @@
  * limitations under the License.
 */
 
-using System;
 using System.IO;
-using QuantConnect;
 using QuantConnect.Logging;
+using DataConverter = QuantConnect.ToolBox.PsychSignalDataConverter.PsychSignalDataConverter;
 
 namespace QuantConnect.ToolBox.PsychSignalDataConverter
 {
     public static class PsychSignalDataConverterProgram
     {
+        /// <summary>
+        /// Entry point for ToolBox application PsychSignalDataConverter
+        /// </summary>
+        /// <param name="dataAbsolutePath"></param>
+        /// <param name="securityType"></param>
+        /// <param name="market"></param>
         public static void PsychSignalDataConverter(string dataAbsolutePath, string securityType, string market)
         {
-            var alternativeDataFolder = Path.Combine(Globals.DataFolder, "equity", Market.USA, "alternative", "psychsignal");
-            Directory.CreateDirectory(alternativeDataFolder);
+            Directory.CreateDirectory(Path.Combine(Globals.DataFolder, "equity", market, "alternative", "psychsignal"));
             
             if (securityType != "equity")
             {
@@ -33,7 +37,7 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
                 return;
             }
 
-            var parser = new PsychSignalDataReader(dataAbsolutePath, alternativeDataFolder, SecurityType.Equity, market).Convert();
+            DataConverter.Convert(dataAbsolutePath);
         }
     }
 }
