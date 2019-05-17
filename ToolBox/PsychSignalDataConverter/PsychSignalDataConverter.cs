@@ -82,7 +82,7 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
                 }
 
                 // SOURCE[0],SYMBOL[1],TIMESTAMP_UTC[2],BULLISH_INTENSITY[3],BEARISH_INTENSITY[4],BULL_MINUS_BEAR[5],BULL_SCORED_MESSAGES[6],BEAR_SCORED_MESSAGES[7],BULL_BEAR_MSG_RATIO[8],TOTAL_SCANNED_MESSAGES[9]
-                handler.Writer.WriteLine(ToCsv(tsFormatted, csv[3], csv[4], csv[6], csv[7], csv[9]));
+                handler.Writer.WriteLine(ToCsv(ts, csv[3], csv[4], csv[6], csv[7], csv[9]));
             }
 
             foreach (var dataFile in Directory.GetFiles(sentimentFolder, "*.csv", SearchOption.AllDirectories))
@@ -101,9 +101,9 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
         /// <param name="bearScoredMessages">Bearish message count</param>
         /// <param name="totalScoredMessages">Total messages scanned</param>
         /// <returns></returns>
-        public static string ToCsv(string ts, string bullIntensity, string bearIntensty, string bullScoredMessages, string bearScoredMessages, string totalScoredMessages)
+        public static string ToCsv(DateTime ts, string bullIntensity, string bearIntensty, string bullScoredMessages, string bearScoredMessages, string totalScoredMessages)
         {
-            return $"{ts},{bullIntensity},{bearIntensty},{bullScoredMessages},{bearScoredMessages},{totalScoredMessages}";
+            return $"{ts.Subtract(new DateTime(ts.Year, ts.Month, ts.Day)).TotalMilliseconds},{bullIntensity},{bearIntensty},{bullScoredMessages},{bearScoredMessages},{totalScoredMessages}";
         }
 
         private class TickerData
@@ -135,6 +135,7 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
             public void UpdateWriter(string dataFilePath)
             {
                 DataPath = dataFilePath;
+                Writer.Flush();
                 Writer.Close();
                 Writer = new StreamWriter(DataPath);
             }
