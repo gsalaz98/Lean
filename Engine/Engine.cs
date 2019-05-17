@@ -100,10 +100,10 @@ namespace QuantConnect.Lean.Engine
 
                 //Reset thread holders.
                 var initializeComplete = false;
-                Thread threadTransactions = null;
                 Thread threadResults = null;
                 Thread threadRealTime = null;
                 Thread threadAlphas = null;
+                WorkerThread workerThread = null;
 
                 //-> Initialize messaging system
                 _systemHandlers.Notify.SetAuthentication(job);
@@ -116,12 +116,16 @@ namespace QuantConnect.Lean.Engine
 
                 IBrokerage brokerage = null;
                 DataManager dataManager = null;
-                var synchronizer = new Synchronizer();
+                var synchronizer = _liveMode ? new LiveSynchronizer() : new Synchronizer();
                 try
                 {
                     // we get the mhdb before creating the algorithm instance,
                     // since the algorithm constructor will use it
                     var marketHoursDatabase = marketHoursDatabaseTask.Result;
+
+                    // start worker thread
+                    workerThread = new WorkerThread();
+                    _algorithmHandlers.Setup.WorkerThread = workerThread;
 
                     // Save algorithm to cache, load algorithm instance:
                     algorithm = _algorithmHandlers.Setup.CreateAlgorithmInstance(job, assemblyPath);
@@ -151,15 +155,13 @@ namespace QuantConnect.Lean.Engine
                             securityService),
                         algorithm,
                         algorithm.TimeKeeper,
-                        marketHoursDatabase);
+                        marketHoursDatabase,
+                        _liveMode);
 
                     _algorithmHandlers.Results.SetDataManager(dataManager);
                     algorithm.SubscriptionManager.SetDataManager(dataManager);
 
-                    synchronizer.Initialize(
-                        algorithm,
-                        dataManager,
-                        _liveMode);
+                    synchronizer.Initialize(algorithm, dataManager);
 
                     // Initialize the data feed before we initialize so he can intercept added securities/universes via events
                     _algorithmHandlers.DataFeed.Initialize(
@@ -306,12 +308,10 @@ namespace QuantConnect.Lean.Engine
                     _algorithmHandlers.Results.SendStatusUpdate(AlgorithmStatus.Running);
 
                     //Launch the data, transaction and realtime handlers into dedicated threads
-                    threadTransactions = new Thread(_algorithmHandlers.Transactions.Run) { IsBackground = true, Name = "Transaction Thread" };
                     threadRealTime = new Thread(_algorithmHandlers.RealTime.Run) { IsBackground = true, Name = "RealTime Thread" };
                     threadAlphas = new Thread(() => _algorithmHandlers.Alphas.Run()) {IsBackground = true, Name = "Alpha Thread" };
 
                     //Launch the data feed, result sending, and transaction models/handlers in separate threads.
-                    threadTransactions.Start(); // Transaction modeller scanning new order requests
                     threadRealTime.Start(); // RealTime scan time for time based events:
                     threadAlphas.Start(); // Alpha thread for processing algorithm alpha insights
 
@@ -344,7 +344,7 @@ namespace QuantConnect.Lean.Engine
                             }
 
                             Log.Trace("Engine.Run(): Exiting Algorithm Manager");
-                        }, job.Controls.RamAllocation);
+                        }, job.Controls.RamAllocation, workerThread:workerThread);
 
                         if (!complete)
                         {
@@ -449,6 +449,7 @@ namespace QuantConnect.Lean.Engine
                     _algorithmHandlers.RealTime.Exit();
                     _algorithmHandlers.Alphas.Exit();
                     dataManager?.RemoveAllSubscriptions();
+                    workerThread?.Dispose();
                 }
 
                 //Close result handler:
@@ -468,7 +469,6 @@ namespace QuantConnect.Lean.Engine
                 }
 
                 //Terminate threads still in active state.
-                if (threadTransactions != null && threadTransactions.IsAlive) threadTransactions.Abort();
                 if (threadResults != null && threadResults.IsAlive) threadResults.Abort();
                 if (threadAlphas != null && threadAlphas.IsAlive) threadAlphas.Abort();
 
