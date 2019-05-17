@@ -27,10 +27,11 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
 {
     public class PsychSignalDataConverter
     {
-        private Dictionary<Symbol, FileFormat> _existingFiles = new Dictionary<Symbol, FileFormat>();
+        private Dictionary<Symbol, List<string>> _existingFiles = new Dictionary<Symbol, List<string>>();
         private MapFileResolver _resolver;
         private StreamWriter _writer;
         private Symbol _previousSymbol;
+        private string _previousFilename;
 
         private readonly string _alternativeDataPath;
         private readonly string _market;
@@ -66,7 +67,7 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
             var csv = data.Split(',');
 
             var source = csv[0];
-            var symbol = csv[1];
+            var ticker = csv[1];
 
             // A field with the header names exists around lines 1388700-1388900.
             // Screen out by checking for a header value.
@@ -78,11 +79,8 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
             DateTime ts;
             decimal bullIntensity;
             decimal bearIntensity;
-            decimal bullMinusBear;
             int bullScoredMessages;
             int bearScoredMessages;
-            decimal bullBearMessageRatio;
-            int totalScannedMessages;
 
             if (!DateTime.TryParse(csv[2], out ts))
             {
@@ -99,11 +97,6 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
                 Log.Error($"Failed to parse bear intensity: {csv[4]}");
                 return false;
             }
-            if (!decimal.TryParse(csv[5], out bullMinusBear))
-            {
-                Log.Error($"Failed to parse bull minus bear intensity: {csv[5]}");
-                return false;
-            }
             if (!int.TryParse(csv[6], out bullScoredMessages))
             {
                 Log.Error($"Failed to parse bull scored messages: {csv[6]}");
@@ -114,80 +107,56 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
                 Log.Error($"Failed to parse bear scored messages: {csv[7]}");
                 return false;
             }
-            if (!decimal.TryParse(csv[8], out bullBearMessageRatio))
-            {
-                Log.Error($"Failed to parse bull bear message ratio: {csv[8]}");
-                return false;
-            }
-            if (!int.TryParse(csv[9], out totalScannedMessages))
-            {
-                Log.Error($"Failed to parse total scanned messages: {csv[9]}");
-                return false;
-            }
             // Screen for: futures, forex, cryptocurrencies, sector names, and non-US exchange symbols
-            if (symbol.Contains(".") || symbol.Contains("_") || symbol.Length > 5)
+            if (ticker.Contains(".") || ticker.Contains("_") || ticker.Length > 5)
             {
                 return true;
             }
 
-            var symbolMapFile = _resolver.ResolveMapFile(symbol, ts);
+            var symbol = Symbol.Create(ticker, _securityType, _market);
+            var csvFilename = ts.ToString("yyyyMMdd") + "_" + ticker.ToLower() + ".csv";
+            var dataFilePath = Path.Combine(_alternativeDataPath, ticker, csvFilename);
 
-            if (symbolMapFile.Count() == 0)
+            if (!_existingFiles.ContainsKey(symbol))
             {
-                return true;
+                _existingFiles.Add(symbol, new List<string>() {
+                    dataFilePath
+                });
             }
-
-            var symbolPermtick = symbolMapFile.Permtick;
-
-            if (string.IsNullOrEmpty(symbolPermtick))
+            else
             {
-                return true;
-            }
-
-            var leanSymbol = Symbol.Create(symbolPermtick, _securityType, _market);
-            var csvFilename = symbolPermtick.ToLower() + ".csv";
-            var dataFilePath = Path.Combine(_alternativeDataPath, csvFilename);
-
-            if (!_existingFiles.ContainsKey(leanSymbol))
-            {
-                _existingFiles.Add(leanSymbol, FileFormat.Csv);
+                _existingFiles[symbol].Add(dataFilePath);
             }
             // Avoids having to re-open the file every time we want to write to it
-            if (_previousSymbol != leanSymbol)
+            if (_previousFilename != csvFilename || _previousSymbol != symbol)
             {
                 // Is null on first run
                 _writer?.Close();
-                _writer = new StreamWriter(dataFilePath, true);
+                _writer = new StreamWriter(dataFilePath, true, Encoding.UTF8, 65536);
             }
 
-            _writer.WriteLine(ToCsv(
-                ts,
-                bullIntensity,
-                bearIntensity,
-                bullMinusBear,
-                bullScoredMessages,
-                bearScoredMessages,
-                bullBearMessageRatio,
-                totalScannedMessages
-            ));
+            _writer.WriteLine(ToCsv(ts, bullIntensity, bearIntensity, bullScoredMessages, bearScoredMessages));
+
+            _previousSymbol = symbol;
+            _previousFilename = csvFilename;
 
             return true;
         }
 
-        public string ToCsv(
-            DateTime ts,
-            decimal bullIntensity,
-            decimal bearIntensity,
-            decimal bullMinusBear,
-            int bullScoredMessages,
-            int bearScoredMessages,
-            decimal bullBearMessageRatio,
-            int totalScannedMessages)
+        /// <summary>
+        /// Converts the data into CSV. A few fields are excluded because we can calculate them ourselves.
+        /// The fields removed are: bull_minus_bear, bull_bear_message_ratio
+        /// </summary>
+        /// <param name="ts">Data timestamp</param>
+        /// <param name="bullIntensity">Bull intensity data</param>
+        /// <param name="bearIntensity">Bear intensity data</param>
+        /// <param name="bullScoredMessages">Bull scored messages data</param>
+        /// <param name="bearScoredMessages">Bear scored messages data</param>
+        /// <returns>CSV formatted data</returns>
+        public string ToCsv(DateTime ts, decimal bullIntensity, decimal bearIntensity, int bullScoredMessages, int bearScoredMessages, int totalScannedMessages)
         {
-            // Use Math.Ceiling instead of floor to avoid introducing look-ahead bias on microsecond timeframe
-            var epochTimeMs = Math.Ceiling(ts.Subtract(new DateTime(1970, 1, 1)).TotalSeconds * 1000).ToString();
-
-            return $"{epochTimeMs},{bullIntensity},{bearIntensity},{bullMinusBear},{bullScoredMessages},{bearScoredMessages},{bullBearMessageRatio},{totalScannedMessages}";
+            var secondsSinceMidnight = ts.Subtract(ts.Date).TotalSeconds;
+            return $"{secondsSinceMidnight},{bullIntensity},{bearIntensity},{bullScoredMessages},{bearScoredMessages},{totalScannedMessages}";
         }
     }
 }

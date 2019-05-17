@@ -17,54 +17,78 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using QuantConnect.Logging;
+using FileHandleCollection = System.Collections.Generic.Dictionary<System.DateTime, string>;
 
 namespace QuantConnect.ToolBox.PsychSignalDataConverter
 {
     public class PsychSignalDataReader
     {
-        private int _chunkSize;
-        private int _currentChunk;
-        private StreamReader _reader;
         private List<string> _currentData = new List<string>();
         private PsychSignalDataConverter _converter; 
 
         /// <summary>
-        /// Processes and reads psychsignal data in chunks to avoid
-        /// running out of memory.
-        /// 
-        /// Chunksize is set to a default of 100000, but can be changed
+        /// Processes and converts psychsignal data into a format suitable for use by Lean
         /// </summary>
-        /// <param name="filePath"></param>
-        /// <param name="chunkSize"></param>
-        public PsychSignalDataReader(string filePath, string alternativeDataFolder, SecurityType securityType = SecurityType.Equity, string market = "usa", int chunkSize = 100000)
+        public PsychSignalDataReader()
         {
-            _reader = new StreamReader(filePath);
-            _chunkSize = chunkSize;
-            _converter = new PsychSignalDataConverter(alternativeDataFolder, securityType, market);
         }
 
-        public void ReadData()
+        /// <summary>
+        /// Iterate over the data, processing each data point before finally zipping the directories
+        /// </summary>
+        public void Convert(string alternativeDataPath)
         {
-            var header = _reader.ReadLine();
-            var currentLine = _reader.ReadLine();
+            var previousFileName = string.Empty;
+            var previousTicker = string.Empty;
+            StreamWriter writer = null;
 
-            Log.Trace(header);
-            Log.Trace(currentLine);
-
-            while (currentLine != string.Empty && currentLine != null)
+            foreach (var currentLine in File.ReadLines(alternativeDataPath))
             {
-                var successful = _converter.ProcessData(currentLine);
-
-                if (!successful)
+                if (currentLine.StartsWith("SOURCE"))
                 {
-                    Log.Trace($"Failed at line: {_currentChunk}");
-                    return;
+                    continue;
                 }
 
-                currentLine = _reader.ReadLine();
-                _currentChunk++;
+                var csv = currentLine.Split(',');
+
+                var source = csv[0];
+                var ticker = csv[1];
+
+                DateTime ts;
+
+                if (!DateTime.TryParse(csv[2], out ts))
+                {
+                    Log.Error($"Failed to parse timestamp: {csv[2]}");
+                    continue;
+                }
+
+                var tsFormatted = ts.ToString("yyyyMMdd");
+                var csvFilename = tsFormatted + ".csv";
+                var dataFilePath = Path.Combine(alternativeDataPath, ticker, csvFilename);
+
+                // Avoids having to re-open the file every time we want to write to it
+                if (previousFileName != csvFilename || previousTicker != ticker)
+                {
+                    // Is null on first run
+                    writer?.Close();
+                    writer = new StreamWriter(dataFilePath, true, Encoding.UTF8, 65536);
+                }
+
+                writer.WriteLine(PsychSignalDataReader.ToCsv(ts, csv[2], csv[3], csv[4], csv[5], csv[8]));
+
+                _previousSymbol = symbol;
+                _previousFilename = csvFilename;
+
+                return true
             }
+            _converter.MoveAndCompress();
+        }
+
+        public static string ToCsv(string ts, string bullIntensity, string bearIntensty, string bullScoredMessages, string bearScoredMessages, string totalScoredMessages)
+        {
+                return $"{ts},{bullIntensity},{bearIntensty},{bullScoredMessages},{bearScoredMessages},{totalScoredMessages}";
         }
     }
 }
