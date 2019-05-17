@@ -29,17 +29,19 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
         /// </summary>
         public static void Convert(string sourceFilePath)
         {
-            var tickerFolders = new HashSet<string>();
-            var previousFilename = string.Empty;
-            var previousTicker = string.Empty;
+            var tickerFileHandlers = new Dictionary<string, TickerData>();
+
             var dataFolder = Path.Combine(Globals.DataFolder, "equity", Market.USA);
             var sentimentFolder = Path.Combine(dataFolder, "alternative", "psychsignal");
             var knownTickerFolder = Path.Combine(dataFolder, "daily");
-            StreamWriter writer = null;
 
-            var knownTickers = from zipFile in Directory.GetFiles(knownTickerFolder)
-                               where zipFile.EndsWith(".zip")
-                               select Path.GetFileNameWithoutExtension(zipFile).ToUpper();
+            var knownTickers = (from zipFile in Directory.GetFiles(knownTickerFolder, "*.zip")
+                               select Path.GetFileNameWithoutExtension(zipFile)).ToList();
+
+            foreach (var ticker in knownTickers)
+            {
+                Directory.CreateDirectory(Path.Combine(sentimentFolder, ticker));
+            }
 
             foreach (var currentLine in File.ReadLines(sourceFilePath))
             {
@@ -50,17 +52,10 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
 
                 var csv = currentLine.Split(',');
 
-                var source = csv[0];
-                var ticker = csv[1];
-
+                var ticker = csv[1].ToLower();
                 if (!knownTickers.Contains(ticker))
                 {
                     continue;
-                }
-                if (!tickerFolders.Contains(ticker))
-                {
-                    Directory.CreateDirectory(Path.Combine(sentimentFolder, ticker.ToLower()));
-                    tickerFolders.Add(ticker);
                 }
 
                 DateTime ts;
@@ -75,26 +70,24 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
                 var dataFilePath = Path.Combine(sentimentFolder, ticker, csvFilename);
 
                 // Avoids having to re-open the file every time we want to write to it
-                if (previousFilename != csvFilename || previousTicker != ticker)
+                TickerData handler;
+                if (!tickerFileHandlers.TryGetValue(ticker, out handler))
                 {
-                    // Is null on first run
-                    writer?.Close();
-                    writer = new StreamWriter(dataFilePath, true, Encoding.UTF8, 65536);
+                    tickerFileHandlers[ticker] = new TickerData(dataFilePath);
+                    handler = tickerFileHandlers[ticker];
+                }
+                if (handler.DataPath != dataFilePath)
+                {
+                    tickerFileHandlers[ticker].UpdateWriter(dataFilePath);
                 }
 
                 // SOURCE[0],SYMBOL[1],TIMESTAMP_UTC[2],BULLISH_INTENSITY[3],BEARISH_INTENSITY[4],BULL_MINUS_BEAR[5],BULL_SCORED_MESSAGES[6],BEAR_SCORED_MESSAGES[7],BULL_BEAR_MSG_RATIO[8],TOTAL_SCANNED_MESSAGES[9]
-                writer.WriteLine(ToCsv(tsFormatted, csv[3], csv[4], csv[6], csv[7], csv[9]));
-
-                previousTicker = ticker;
-                previousFilename = csvFilename;
+                handler.Writer.WriteLine(ToCsv(tsFormatted, csv[3], csv[4], csv[6], csv[7], csv[9]));
             }
 
-            foreach (var tickerFolder in Directory.GetDirectories(sentimentFolder))
+            foreach (var dataFile in Directory.GetFiles(sentimentFolder, "*.csv", SearchOption.AllDirectories))
             {
-                foreach (var dataFile in Directory.GetFiles(tickerFolder))
-                {
-                    Compression.Zip(dataFile);
-                }
+                Compression.Zip(dataFile);
             }
         }
 
@@ -111,6 +104,40 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
         public static string ToCsv(string ts, string bullIntensity, string bearIntensty, string bullScoredMessages, string bearScoredMessages, string totalScoredMessages)
         {
             return $"{ts},{bullIntensity},{bearIntensty},{bullScoredMessages},{bearScoredMessages},{totalScoredMessages}";
+        }
+
+        private class TickerData
+        {
+            /// <summary>
+            /// File writer as stream
+            /// </summary>
+            public StreamWriter Writer { get; private set; }
+
+            /// <summary>
+            /// Path to the data (csv file)
+            /// </summary>
+            public string DataPath { get; private set; }
+
+            /// <summary>
+            /// Creates writer instances
+            /// </summary>
+            /// <param name="dataFilePath">Path to the file we want to write</param>
+            public TickerData(string dataFilePath)
+            {
+                DataPath = dataFilePath;
+                Writer = new StreamWriter(DataPath);
+            }
+
+            /// <summary>
+            /// Closes and updates the writer to a new file path
+            /// </summary>
+            /// <param name="dataFilePath">Path to the file we want to write</param>
+            public void UpdateWriter(string dataFilePath)
+            {
+                DataPath = dataFilePath;
+                Writer.Close();
+                Writer = new StreamWriter(DataPath);
+            }
         }
     }
 }

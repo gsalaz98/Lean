@@ -72,7 +72,7 @@ namespace QuantConnect.Data.Custom.PsychSignal
                     config.Market,
                     "alternative",
                     "psychsignal",
-                    config.Symbol.Value,
+                    config.Symbol.Value.ToLower(),
                     date.ToString("yyyyMMdd") + ".zip"
                 ),
                 SubscriptionTransportMedium.LocalFile,
@@ -99,7 +99,7 @@ namespace QuantConnect.Data.Custom.PsychSignal
             var ts = new DateTime(date.Year, date.Month, date.Day).AddMilliseconds(Convert.ToInt64(csv[0]));
             var bullIntensity = Convert.ToDecimal(csv[1]);
             var bearIntensity = Convert.ToDecimal(csv[2]);
-            var bullMinusBearIntensity = bullIntensity - bearIntensity;
+            var bullMinusBear = bullIntensity - bearIntensity;
             var bullScoredMessages = Convert.ToInt32(csv[3]);
             var bearScoredMessages = Convert.ToInt32(csv[4]);
             var totalScoredMessages = Convert.ToInt32(csv[5]);
@@ -108,7 +108,7 @@ namespace QuantConnect.Data.Custom.PsychSignal
             {
                 Time = ts,
                 Symbol = config.Symbol,
-                Value = bullMinusBearIntensity,
+                Value = bullMinusBear,
                 BullIntensity = bullIntensity,
                 BearIntensity = bearIntensity,
                 BullScoredMessages = bullScoredMessages,
