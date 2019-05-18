@@ -16,7 +16,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using System.Linq;
 using QuantConnect.Logging;
 
@@ -27,11 +26,11 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
         /// <summary>
         /// Iterate over the data, processing each data point before finally zipping the directories
         /// </summary>
-        public static void Convert(string sourceFilePath)
+        public static void Convert(string sourceFilePath, string securityType, string market)
         {
             var tickerFileHandlers = new Dictionary<string, TickerData>();
 
-            var dataFolder = Path.Combine(Globals.DataFolder, "equity", Market.USA);
+            var dataFolder = Path.Combine(Globals.DataFolder, securityType, market);
             var sentimentFolder = Path.Combine(dataFolder, "alternative", "psychsignal");
             var knownTickerFolder = Path.Combine(dataFolder, "daily");
 
@@ -119,7 +118,8 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
             public string DataPath { get; private set; }
 
             /// <summary>
-            /// Creates writer instances
+            /// Creates writer instances and saves file path.
+            /// Used to keep file open until the path changes for the symbol
             /// </summary>
             /// <param name="dataFilePath">Path to the file we want to write</param>
             public TickerData(string dataFilePath)

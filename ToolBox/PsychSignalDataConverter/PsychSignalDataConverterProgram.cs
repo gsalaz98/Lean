@@ -37,7 +37,7 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
                 return;
             }
 
-            DataConverter.Convert(dataAbsolutePath);
+            DataConverter.Convert(dataAbsolutePath, securityType, market);
         }
     }
 }
