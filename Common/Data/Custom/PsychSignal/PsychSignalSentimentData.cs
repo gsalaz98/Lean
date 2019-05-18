@@ -99,29 +99,36 @@ namespace QuantConnect.Data.Custom.PsychSignal
         /// </returns> 
         public override BaseData Reader(SubscriptionDataConfig config, string line, DateTime date, bool isLiveMode)
         {
-            var csv = line.Split(',');
-
-            var ts = new DateTime(date.Year, date.Month, date.Day).AddMilliseconds(Convert.ToDouble(csv[0]));
-            var bullIntensity = Convert.ToDecimal(csv[1]);
-            var bearIntensity = Convert.ToDecimal(csv[2]);
-            var bullMinusBear = bullIntensity - bearIntensity;
-            var bullScoredMessages = Convert.ToInt32(csv[3]);
-            var bearScoredMessages = Convert.ToInt32(csv[4]);
-            var totalScoredMessages = Convert.ToInt32(csv[5]);
-
-            return new PsychSignalSentimentData()
+            try
             {
-                Time = ts,
-                Symbol = config.Symbol,
-                Value = bullMinusBear,
-                BullIntensity = bullIntensity,
-                BearIntensity = bearIntensity,
-                BullMinusBear = bullMinusBear,
-                BullScoredMessages = bullScoredMessages,
-                BearScoredMessages = bearScoredMessages,
-                BullBearMessageRatio = bearScoredMessages == 0 ? 0 : bullScoredMessages / bearScoredMessages,
-                TotalScoredMessages = totalScoredMessages
-            };
+                var csv = line.Split(',');
+
+                var ts = new DateTime(date.Year, date.Month, date.Day).AddMilliseconds(Convert.ToDouble(csv[0]));
+                var bullIntensity = Convert.ToDecimal(csv[1]);
+                var bearIntensity = Convert.ToDecimal(csv[2]);
+                var bullMinusBear = bullIntensity - bearIntensity;
+                var bullScoredMessages = Convert.ToInt32(csv[3]);
+                var bearScoredMessages = Convert.ToInt32(csv[4]);
+                var totalScoredMessages = Convert.ToInt32(csv[5]);
+
+                return new PsychSignalSentimentData()
+                {
+                    Time = ts,
+                    Symbol = config.Symbol,
+                    Value = bullMinusBear,
+                    BullIntensity = bullIntensity,
+                    BearIntensity = bearIntensity,
+                    BullMinusBear = bullMinusBear,
+                    BullScoredMessages = bullScoredMessages,
+                    BearScoredMessages = bearScoredMessages,
+                    BullBearMessageRatio = bearScoredMessages == 0 ? 0 : bullScoredMessages / bearScoredMessages,
+                    TotalScoredMessages = totalScoredMessages
+                };
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 }
