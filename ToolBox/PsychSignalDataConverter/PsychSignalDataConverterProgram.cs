@@ -30,14 +30,16 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
         public static void PsychSignalDataConverter(string dataAbsolutePath, string securityType, string market)
         {
             Directory.CreateDirectory(Path.Combine(Globals.DataFolder, "equity", market, "alternative", "psychsignal"));
-            
+
             if (securityType != "equity")
             {
                 Log.Error("Only equity data is supported. Exiting...");
                 return;
             }
 
-            DataConverter.Convert(dataAbsolutePath, securityType, market);
+            var converter = new DataConverter();
+
+            converter.Convert(dataAbsolutePath, SecurityType.Equity, market);
         }
     }
 }

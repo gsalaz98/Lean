@@ -15,7 +15,6 @@
 
 using QuantConnect.Data;
 using QuantConnect.Data.Custom.PsychSignal;
-using QuantConnect.Indicators;
 
 namespace QuantConnect.Algorithm.CSharp
 {
@@ -33,36 +32,34 @@ namespace QuantConnect.Algorithm.CSharp
         private Symbol _symbol;
 
         /// <summary>
-        /// Initialise the data and resolution required, as well as the cash and start-end dates for your algorithm. All algorithms must initialized.
+        /// Initialize the algorithm with our custom data
         /// </summary>
         public override void Initialize()
         {
-            SetStartDate(2011, 1, 1);
-            SetEndDate(2012, 12, 31);
+            SetStartDate(2014, 6, 5);
+            SetEndDate(2014, 6, 9);
             SetCash(100000);
 
-            _symbol = AddData<PsychSignalSentimentData>(Ticker, Resolution.Daily).Symbol;
+            AddData<PsychSignalSentimentData>(Ticker);
+            _symbol = AddEquity(Ticker).Symbol;
         }
 
         /// <summary>
-        /// OnData event is the primary entry point for your algorithm. Each new data point will be pumped in here.
+        /// Loads each new data point into the algorithm. On sentiment data, we place orders depending on the sentiment
         /// </summary>
-        /// <param name="slice">Slice object keyed by symbol containing the stock data</param>
+        /// <param name="slice">Slice object containing the sentiment data</param>
         public override void OnData(Slice slice)
         {
-            Log(":wave:");
-            var sentimentData = slice.Get<PsychSignalSentimentData>();
-            foreach (var row in sentimentData.Values)
+            var data = slice.Get<PsychSignalSentimentData>();
+            foreach (var message in data.Values)
             {
-                Log($"{Time} - {row.Symbol.Value} - BullIntensity: {row.BullIntensity}, BearIntensity: {row.BearIntensity}, BullMinusBear: {row.Value}, BullMessages: {row.BullScoredMessages}, BearMessages: {row.BearScoredMessages}, BullBearMsgRatio: {row.BullBearMessageRatio}, TotalMessages{row.TotalScoredMessages}");
-
-                if (Portfolio.Invested && row.BearIntensity < -2.0m && row.BearScoredMessages >= 3)
+                if (!Portfolio.Invested && message.BullIntensity > 1.5m && message.BullScoredMessages > 3.0m)
                 {
-                    MarketOrder(_symbol, -Portfolio[_symbol].Quantity);
+                    SetHoldings(_symbol, 0.5);
                 }
-                else if (!Portfolio.Invested && row.BullIntensity > 2.0m && row.BullScoredMessages >= 3)
+                else if (Portfolio.Invested && message.BearIntensity > 1.5m && message.BearScoredMessages > 3.0m)
                 {
-                    MarketOrder(_symbol, CalculateOrderQuantity(_symbol, 0.10));
+                    Liquidate(_symbol);
                 }
             }
         }
