@@ -29,9 +29,8 @@ namespace QuantConnect.ToolBox.SecDataDownloader
         {
             var downloader = new SecDataDownloader(cikTickerFilePath);
             var symbol = Symbol.Create("AAPL", SecurityType.Equity, Market.USA);
-            var resolution = Resolution.Tick;
 
-            downloader.Get(symbol, resolution, startDate, endDate);
+            downloader.Get(symbol, Resolution.Tick, startDate, endDate);
         }
     }
 }

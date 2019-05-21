@@ -226,16 +226,5 @@ namespace QuantConnect.Data.Custom.Sec
                 }
             }
         }
-
-        public virtual string ToJson()
-        {
-            return JsonConvert.SerializeObject(this, Formatting.None);
-        }
     }
-
-    
-
-   
-
-    
 }

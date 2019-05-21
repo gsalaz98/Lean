@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using ICSharpCode.SharpZipLib.Tar;
+using Newtonsoft.Json;
 using QuantConnect.Data;
 using QuantConnect.Data.Custom.Sec;
 using QuantConnect.Logging;
@@ -159,7 +160,7 @@ namespace QuantConnect.ToolBox.SecDataDownloader
 
             using (var writer = new StreamWriter(reportFilePath))
             {
-                writer.Write(report.ToJson());
+                writer.Write(JsonConvert.SerializeObject(report, Formatting.None));
             }
         }
     }
