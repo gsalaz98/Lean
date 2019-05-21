@@ -37,6 +37,7 @@ using QuantConnect.ToolBox.OandaDownloader;
 using QuantConnect.ToolBox.QuandlBitfinexDownloader;
 using QuantConnect.ToolBox.QuantQuoteConverter;
 using QuantConnect.ToolBox.RandomDataGenerator;
+using QuantConnect.ToolBox.SecDataDownloader;
 using QuantConnect.ToolBox.YahooDownloader;
 using QuantConnect.Util;
 
@@ -113,9 +114,14 @@ namespace QuantConnect.ToolBox
                     case "bitfinexdownloader":
                         BitfinexDownloaderProgram.BitfinexDownloader(tickers, resolution, fromDate, toDate);
                         break;
+                    case "secdl":
+                    case "secdownloader":
+                        SecDataDownloaderProgram.SecDataDownloader(fromDate, toDate, GetParameterOrExit(optionsObject, "cik-ticker-path"));
+                        break;
                     default:
                         PrintMessageAndExit(1, "ERROR: Unrecognized --app value");
                         break;
+
                 }
             }
             else
