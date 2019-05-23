@@ -55,7 +55,6 @@ namespace QuantConnect.Configuration
                                                                                 + "be used. --to-date=yyyyMMdd-HH:mm:ss"),
                 new CommandLineOption("exchange", CommandOptionType.SingleValue, "[REQUIRED for CryptoiqDownloader] [Optional for KaikoDataConverter] The exchange to process, if not defined, all exchanges will be processed."),
                 new CommandLineOption("api-key", CommandOptionType.SingleValue, "[REQUIRED for QuandlBitfinexDownloader]"),
-                new CommandLineOption("cik-ticker-path", CommandOptionType.SingleValue, "[REQUIRED for SEC Downloader. Sets the path to the CIK/Ticker file used to resolve tickers from CIK values]"),
                 new CommandLineOption("date", CommandOptionType.SingleValue, "[REQUIRED for AlgoSeekFuturesConverter, AlgoSeekOptionsConverter, KaikoDataConverter] "
                                                                              + "Date for the option bz files: --date=yyyyMMdd"),
                 new CommandLineOption("source-dir", CommandOptionType.SingleValue, "[REQUIRED for IVolatilityEquityConverter, KaikoDataConverter,"

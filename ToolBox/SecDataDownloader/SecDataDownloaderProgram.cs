@@ -25,7 +25,7 @@ namespace QuantConnect.ToolBox.SecDataDownloader
 {
     public static class SecDataDownloaderProgram
     {
-        public static void SecDataDownloader(DateTime startDate, DateTime endDate, string cikTickerFilePath)
+        public static void SecDataDownloader(DateTime startDate, DateTime endDate)
         {
             // Create dummy symbol
             var symbol = Symbol.Create("FOO", SecurityType.Equity, Market.USA);

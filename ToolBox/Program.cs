@@ -116,7 +116,7 @@ namespace QuantConnect.ToolBox
                         break;
                     case "secdl":
                     case "secdownloader":
-                        SecDataDownloaderProgram.SecDataDownloader(fromDate, toDate, GetParameterOrExit(optionsObject, "cik-ticker-path"));
+                        SecDataDownloaderProgram.SecDataDownloader(fromDate, toDate);
                         break;
                     default:
                         PrintMessageAndExit(1, "ERROR: Unrecognized --app value");
