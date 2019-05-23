@@ -74,7 +74,7 @@ namespace QuantConnect.ToolBox.SecDataDownloader
                                 CikTicker[tickerCik[1]] = new List<string>();
                             }
 
-                            CikTicker[tickerCik[1]].Add(tickerCik[0]);
+                            CikTicker[tickerCik[1].PadLeft(10, '0')].Add(tickerCik[0]);
                         });
 
                 KnownEquities = Directory.GetFiles(knownTickerFolder)
