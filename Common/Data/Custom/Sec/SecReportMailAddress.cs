@@ -28,6 +28,6 @@ namespace QuantConnect.Data.Custom.Sec
         [JsonProperty("STATE")]
         public string State;
         [JsonProperty("ZIP")]
-        public int Zip;
+        public string Zip;
     }
 }

@@ -27,18 +27,18 @@ namespace QuantConnect.Data.Custom.Sec
         public string FType;
         [JsonProperty("PUBLIC-DOCUMENT-COUNT")]
         public string PublicDocumentCount;
-        [JsonProperty("PERIOD")]
+        [JsonProperty("PERIOD"), JsonConverter(typeof(SecReportDateTimeConverter))]
         public DateTime Period;
-        [JsonProperty("ITEMS")]
-        public List<string> Items;
-        [JsonProperty("FILING-DATE")]
+        [JsonProperty("ITEMS"), JsonConverter(typeof(PossibleListConverter<string>))]
+        public List<string> Items = new List<string>();
+        [JsonProperty("FILING-DATE"), JsonConverter(typeof(SecReportDateTimeConverter))]
         public DateTime FilingDate;
-        [JsonProperty("DATE-OF-FILING-CHANGE")]
+        [JsonProperty("DATE-OF-FILING-CHANGE"), JsonConverter(typeof(SecReportDateTimeConverter))]
         public DateTime FilingDateChange;
 
-        [JsonProperty("FILER")]
-        public SecReportFiler Filer;
-        [JsonProperty("DOCUMENT")]
-        public List<SecReportDocument> Documents;
+        [JsonProperty("FILER"), JsonConverter(typeof(PossibleListConverter<SecReportFiler>))]
+        public List<SecReportFiler> Filer = new List<SecReportFiler>();
+        [JsonProperty("DOCUMENT"), JsonConverter(typeof(PossibleListConverter<SecReportDocument>))]
+        public List<SecReportDocument> Documents = new List<SecReportDocument>();
     }
 }

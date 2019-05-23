@@ -24,11 +24,11 @@ namespace QuantConnect.Data.Custom.Sec
         public SecReportCompanyData CompanyData;
         [JsonProperty("FILING-VALUES")]
         public SecReportFilingValues Values;
-        [JsonProperty("BUSINESS-ADDRESS")]
+        [JsonProperty("BUSINESS-ADDRESS"), JsonConverter(typeof(PossibleListConverter<SecReportBusinessAddress>))]
         public List<SecReportBusinessAddress> BusinessAddress;
-        [JsonProperty("MAIL-ADDRESS")]
+        [JsonProperty("MAIL-ADDRESS"), JsonConverter(typeof(PossibleListConverter<SecReportMailAddress>))]
         public List<SecReportMailAddress> MailingAddress;
-        [JsonProperty("FORMER-COMPANY")]
+        [JsonProperty("FORMER-COMPANY"), JsonConverter(typeof(PossibleListConverter<SecReportFormerCompany>))]
         public List<SecReportFormerCompany> FormerCompanies;
     }
 }

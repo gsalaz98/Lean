@@ -50,7 +50,7 @@ namespace QuantConnect.Data.Custom.Sec
                     "alternative",
                     "sec",
                     config.Symbol.Value.ToLower(),
-                    $"{date:yyyyMMdd}.zip#10K.json"
+                    $"{date:yyyyMMdd}_10K.zip#10K.json"
                 ),
                 SubscriptionTransportMedium.LocalFile,
                 FileFormat.Csv
@@ -67,7 +67,7 @@ namespace QuantConnect.Data.Custom.Sec
         /// <returns></returns>
         public override BaseData Reader(SubscriptionDataConfig config, string line, DateTime date, bool isLiveMode)
         {
-            var report = JsonConvert.DeserializeObject<SecReport10K>(line);
+            var report = new SecReport10K(JsonConvert.DeserializeObject<SecReportSubmission>(line));
             report.Time = report.Report.FilingDate;
             report.Symbol = config.Symbol;
 

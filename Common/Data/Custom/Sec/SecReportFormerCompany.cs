@@ -22,7 +22,7 @@ namespace QuantConnect.Data.Custom.Sec
     {
         [JsonProperty("FORMER-CONFORMED-NAME")]
         public string FormerConformedName;
-        [JsonProperty("DATE-CHANGED")]
+        [JsonProperty("DATE-CHANGED"), JsonConverter(typeof(SecReportDateTimeConverter))]
         public DateTime Changed;
     }
 }

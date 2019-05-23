@@ -219,6 +219,7 @@
     <Compile Include="ChartPoint.cs" />
     <Compile Include="Data\Consolidators\CalendarType.cs" />
     <Compile Include="Data\Consolidators\FilteredIdentityDataConsolidator.cs" />
+    <Compile Include="Data\Custom\Sec\SecReportConverters.cs" />
     <Compile Include="Data\Custom\Sec\SecReportBusinessAddress.cs" />
     <Compile Include="Data\Custom\Sec\SecReportCompanyData.cs" />
     <Compile Include="Data\Custom\Sec\SecReportDocument.cs" />

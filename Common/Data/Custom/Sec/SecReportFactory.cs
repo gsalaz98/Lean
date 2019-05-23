@@ -15,7 +15,10 @@
 
 using Newtonsoft.Json;
 using System;
+using System.Data;
+using System.IO;
 using System.Xml;
+using QuantConnect.Logging;
 using Formatting = Newtonsoft.Json.Formatting;
 
 namespace QuantConnect.Data.Custom.Sec
@@ -23,17 +26,26 @@ namespace QuantConnect.Data.Custom.Sec
     public class SecReportFactory
     {
         /// <summary>
-        /// SEC report custom data type. ctor parses report contents and updates the instance with
-        /// the values found in the report
+        /// Factory method creates SEC report by deserializing XML formatted SEC data to <see cref="SecReportSubmission"/> object
         /// </summary>
-        /// <param name="reportContents">File stream containing report contents</param>
+        /// <param name="rawDataXmlFilePath">Path to XML file containing formatted SEC data</param>
         public SecReport CreateSecReport(string rawDataXmlFilePath)
         {
             var secReportXml = new XmlDocument();
-            secReportXml.Load(rawDataXmlFilePath);
-            var json = JsonConvert.SerializeXmlNode(secReportXml, Formatting.None, true);
 
+            try
+            {
+                secReportXml.Load(rawDataXmlFilePath);
+            }
+            catch (Exception)
+            {
+                Log.Error($"Failed to load XML file: {rawDataXmlFilePath}");
+                throw;
+            }
+
+            var json = JsonConvert.SerializeXmlNode(secReportXml, Formatting.None, true);
             var secReportDocument = JsonConvert.DeserializeObject<SecReportSubmission>(json);
+
             switch (secReportDocument.FType)
             {
                 case "8-K":
@@ -43,17 +55,15 @@ namespace QuantConnect.Data.Custom.Sec
                 case "10-Q":
                     return new SecReport10Q(secReportDocument);
                 default:
-                    throw new Exception("SEC form type {secReportDocument.FType} is not supported at this time");
+                    throw new DataException($"SEC form type {secReportDocument.FType} is not supported at this time");
             }
-
-
         }
 
         /// <summary>
         /// Determines if the given line has a value associated with the tag
         /// </summary>
-        /// <param name="line">Line of text potentially containing SEC data</param>
-        /// <returns></returns>
+        /// <param name="line">Line of text from SEC report</param>
+        /// <returns>Boolean indicating whether the line contains a value</returns>
         public bool HasValue(string line)
         {
             var tagEnd = line.IndexOf(">", StringComparison.Ordinal);
@@ -65,16 +75,31 @@ namespace QuantConnect.Data.Custom.Sec
 
             return line.Length > tagEnd + 1;
         }
+        
+        /// <summary>
+        /// Gets the line's value (if there is one)
+        /// </summary>
+        /// <param name="line">Line of text from SEC report</param>
+        /// <returns>Value associated with the tag</returns>
+        public string GetTagValueFromLine(string line)
+        {
+            return line.Substring(line.IndexOf(">", StringComparison.Ordinal) + 1);
+        }
 
         /// <summary>
         /// Gets the tag name from a given line
         /// </summary>
-        /// <param name="line"></param>
-        /// <returns></returns>
+        /// <param name="line">Line of text from SEC report</param>
+        /// <returns>Tag name from the line</returns>
         public string GetTagNameFromLine(string line)
         {
-            var start = line.IndexOf("<", StringComparison.Ordinal);
-            var length = line.IndexOf(">", StringComparison.Ordinal) - start - 1;
+            var start = line.IndexOf("<", StringComparison.Ordinal) + 1;
+            var length = line.IndexOf(">", StringComparison.Ordinal) - start;
+
+            if (start == -1 || length <= 0)
+            {
+                return string.Empty;
+            }
 
             return line.Substring(start, length);
         }
