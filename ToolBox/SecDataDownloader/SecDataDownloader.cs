@@ -87,7 +87,7 @@ namespace QuantConnect.ToolBox.SecDataDownloader
 
         public IEnumerable<BaseData> Get(Symbol symbol, Resolution resolution, DateTime startUtc, DateTime endUtc)
         {
-            var rawPath = Path.Combine(Destination, "raw");
+            var rawPath = Path.Combine(Destination, "raw_data");
 
             Directory.CreateDirectory(rawPath);
 
