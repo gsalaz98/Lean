@@ -30,7 +30,7 @@ namespace QuantConnect.Data.Custom.Sec
         }
 
         /// <summary>
-        /// Returns a subscription data source pointing towards SEC 10-K report data
+        /// Returns a subscription data source pointing towards SEC 10-Q report data
         /// </summary>
         /// <param name="config">User configuration</param>
         /// <param name="date">Date data has been requested for</param>
