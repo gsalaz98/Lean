@@ -69,12 +69,14 @@ namespace QuantConnect.ToolBox.SecDataDownloader
                     .ForEach(
                         tickerCik =>
                         {
-                            if (!CikTicker.ContainsKey(tickerCik[1]))
+                            var cikFormatted = tickerCik[1].PadLeft(10, '0');
+
+                            if (!CikTicker.ContainsKey(cikFormatted))
                             {
-                                CikTicker[tickerCik[1]] = new List<string>();
+                                CikTicker[cikFormatted] = new List<string>();
                             }
 
-                            CikTicker[tickerCik[1].PadLeft(10, '0')].Add(tickerCik[0]);
+                            CikTicker[cikFormatted].Add(tickerCik[0]);
                         });
 
                 KnownEquities = Directory.GetFiles(knownTickerFolder)
