@@ -55,6 +55,7 @@ namespace QuantConnect.Configuration
                                                                                 + "be used. --to-date=yyyyMMdd-HH:mm:ss"),
                 new CommandLineOption("exchange", CommandOptionType.SingleValue, "[REQUIRED for CryptoiqDownloader] [Optional for KaikoDataConverter] The exchange to process, if not defined, all exchanges will be processed."),
                 new CommandLineOption("api-key", CommandOptionType.SingleValue, "[REQUIRED for QuandlBitfinexDownloader]"),
+                new CommandLineOption("cik-ticker-path", CommandOptionType.SingleValue, "[REQUIRED for SEC Downloader. Sets the path to the CIK/Ticker file used to resolve tickers from CIK values]"),
                 new CommandLineOption("date", CommandOptionType.SingleValue, "[REQUIRED for AlgoSeekFuturesConverter, AlgoSeekOptionsConverter, KaikoDataConverter] "
                                                                              + "Date for the option bz files: --date=yyyyMMdd"),
                 new CommandLineOption("source-dir", CommandOptionType.SingleValue, "[REQUIRED for IVolatilityEquityConverter, KaikoDataConverter,"
@@ -77,7 +78,6 @@ namespace QuantConnect.Configuration
                 new CommandLineOption("dividends-percentage", CommandOptionType.SingleValue, "[OPTIONAL for RandomDataGenerator. Sets the probability each equity generated will have dividends. Note that this is not the probability for all symbols genearted. Only used for Equity. Defaults to 60.0: Example: --dividends-percentage=25.5 ]"),
                 new CommandLineOption("dividend-every-quarter-percentage", CommandOptionType.SingleValue, "[OPTIONAL for RandomDataGenerator. Sets the probability each equity generated will have a dividend event every quarter. Note that this is not the total probability for all symbols generated. Only used for Equity. Defaults to 30.0: Example: --dividend-every-quarter-percentage=15.0 ]"),
                 new CommandLineOption("symbol", CommandOptionType.SingleValue, "[OPTIONAL for SecDataDownloader. Sets the symbol to get results back from SEC filings. Returned as JSON.]"),
-                new CommandLineOption("from-date-utc", CommandOptionType.SingleValue, "[REQUIRED for ")
             };
 
         /// <summary>

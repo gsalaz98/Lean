@@ -229,6 +229,8 @@
     <Compile Include="RandomDataGenerator\SymbolGenerator.cs" />
     <Compile Include="RandomDataGenerator\TickGenerator.cs" />
     <Compile Include="RandomDataGenerator\TooManyFailedAttemptsException.cs" />
+    <Compile Include="SecDataDownloader\SecDataDownloader.cs" />
+    <Compile Include="SecDataDownloader\SecDataDownloaderProgram.cs" />
     <Compile Include="TickAggregator.cs" />
     <Compile Include="AlgoSeekFuturesConverter\AlgoSeekFuturesConverter.cs" />
     <Compile Include="AlgoSeekFuturesConverter\AlgoSeekFuturesProcessor.cs" />

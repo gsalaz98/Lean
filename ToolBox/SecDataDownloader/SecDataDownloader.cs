@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using ICSharpCode.SharpZipLib.Tar;
+using ICSharpCode.SharpZipLib.GZip;
 using Newtonsoft.Json;
 using QuantConnect.Data;
 using QuantConnect.Data.Custom.Sec;
@@ -95,18 +96,20 @@ namespace QuantConnect.ToolBox.SecDataDownloader
                             $"{BaseUrl}/{currentDate.Year}/{quarter}/{currentDate:yyyyMMdd}.nc.tar.gz"
                         );
 
-                        using (var archive = TarArchive.CreateInputTarArchive(data))
+                        using (var archive = TarArchive.CreateInputTarArchive(new GZipInputStream(data)))
                         {
                             var newDataPath = Path.Combine(rawPath, $"{currentDate:yyyyMMdd}");
 
                             Directory.CreateDirectory(newDataPath);
                             archive.ExtractContents(newDataPath);
+
+                            Log.Trace($"Extracted SEC data to path {newDataPath}");
                         }
                     }
                 }
                 catch (WebException)
                 {
-                    Log.Trace($"Report files not found on date {currentDate:yyyy-MM-dd}");
+                    Log.Error($"Report files not found on date {currentDate:yyyy-MM-dd}");
                 }
                 catch (Exception e)
                 {
@@ -117,10 +120,28 @@ namespace QuantConnect.ToolBox.SecDataDownloader
             // For the meantime, let's only process .nc files, and deal with corrections later
             foreach (var rawReportFilePath in Directory.GetFiles(rawPath, "*.nc", SearchOption.AllDirectories))
             {
-                var report = new SecReport(File.ReadLines(rawReportFilePath));
+                var rawReportXmlFilePath = $"new_{rawReportFilePath}.xml";
+                var factory = new SecReportFactory();
 
+                using (var writer = new StreamWriter(rawReportXmlFilePath))
+                {
+                    foreach (var line in File.ReadLines(rawReportFilePath))
+                    {
+                        var newXmlLine = line;
+
+                        if (factory.HasValue(line))
+                        {
+                            newXmlLine = $"{line.Trim()}</{factory.GetTagNameFromLine(line)}>\n";
+                        }
+
+                        writer.Write(newXmlLine);
+                    }
+                }
+
+                var report = new SecReportFactory().CreateSecReport(rawReportXmlFilePath);
+                
                 string ticker;
-                if (!CikTicker.TryGetValue(report.Cik, out ticker))
+                if (!CikTicker.TryGetValue(report.Report.Filer.CompanyData.Cik, out ticker))
                 {
                     continue;
                 }
@@ -130,7 +151,7 @@ namespace QuantConnect.ToolBox.SecDataDownloader
                  *     continue;
                  * }
                  */
-                
+
                 WriteReport(report, ticker);
             }
 
@@ -152,8 +173,8 @@ namespace QuantConnect.ToolBox.SecDataDownloader
         /// <param name="ticker">Symbol ticker</param>
         public void WriteReport(SecReport report, string ticker)
         {
-            var reportPath = Path.Combine(Destination, ticker.ToLower(), $"{report.FilingDate:yyyyMMdd}");
-            var formTypeNormalized = report.FormType.Replace("-", "");
+            var reportPath = Path.Combine(Destination, ticker.ToLower(), $"{report.Report.FilingDate:yyyyMMdd}");
+            var formTypeNormalized = report.Report.FType.Replace("-", "");
             var reportFilePath = Path.Combine(reportPath, $"{formTypeNormalized}.json");
 
             Directory.CreateDirectory(reportPath);

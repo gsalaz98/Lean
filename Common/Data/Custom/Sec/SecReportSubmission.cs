@@ -15,13 +15,30 @@
 
 using System;
 using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace QuantConnect.Data.Custom.Sec
 {
-    public class SecReport8K : SecReport
+    public class SecReportSubmission 
     {
-        public SecReport8K(SecReportSubmission report) : base(report)
-        {
-        }
+        [JsonProperty("ACCESSION-NUMBER")]
+        public string AccessionNumber;
+        [JsonProperty("TYPE")]
+        public string FType;
+        [JsonProperty("PUBLIC-DOCUMENT-COUNT")]
+        public string PublicDocumentCount;
+        [JsonProperty("PERIOD")]
+        public DateTime Period;
+        [JsonProperty("ITEMS")]
+        public List<string> Items;
+        [JsonProperty("FILING-DATE")]
+        public DateTime FilingDate;
+        [JsonProperty("DATE-OF-FILING-CHANGE")]
+        public DateTime FilingDateChange;
+
+        [JsonProperty("FILER")]
+        public SecReportFiler Filer;
+        [JsonProperty("DOCUMENT")]
+        public List<SecReportDocument> Documents;
     }
 }

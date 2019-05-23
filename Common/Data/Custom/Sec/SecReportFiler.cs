@@ -13,15 +13,22 @@
  * limitations under the License.
 */
 
-using System;
+using Newtonsoft.Json;
 using System.Collections.Generic;
 
 namespace QuantConnect.Data.Custom.Sec
 {
-    public class SecReport8K : SecReport
+    public class SecReportFiler
     {
-        public SecReport8K(SecReportSubmission report) : base(report)
-        {
-        }
+        [JsonProperty("COMPANY-DATA")]
+        public SecReportCompanyData CompanyData;
+        [JsonProperty("FILING-VALUES")]
+        public SecReportFilingValues Values;
+        [JsonProperty("BUSINESS-ADDRESS")]
+        public List<SecReportBusinessAddress> BusinessAddress;
+        [JsonProperty("MAIL-ADDRESS")]
+        public List<SecReportMailAddress> MailingAddress;
+        [JsonProperty("FORMER-COMPANY")]
+        public List<SecReportFormerCompany> FormerCompanies;
     }
 }

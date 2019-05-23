@@ -19,7 +19,7 @@ namespace QuantConnect.Data.Custom.Sec
 {
     public class SecReport10Q : SecReport
     {
-        public SecReport10Q(IEnumerable<string> reportContents) : base(reportContents)
+        public SecReport10Q(SecReportSubmission report) : base(report)
         {
         }
     }

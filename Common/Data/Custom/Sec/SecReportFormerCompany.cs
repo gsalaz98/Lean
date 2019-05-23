@@ -14,14 +14,15 @@
 */
 
 using System;
-using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace QuantConnect.Data.Custom.Sec
 {
-    public class SecReport8K : SecReport
+    public class SecReportFormerCompany 
     {
-        public SecReport8K(SecReportSubmission report) : base(report)
-        {
-        }
+        [JsonProperty("FORMER-CONFORMED-NAME")]
+        public string FormerConformedName;
+        [JsonProperty("DATE-CHANGED")]
+        public DateTime Changed;
     }
 }
