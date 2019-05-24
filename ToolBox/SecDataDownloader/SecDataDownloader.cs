@@ -15,8 +15,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Security;
@@ -26,7 +26,6 @@ using Newtonsoft.Json;
 using QuantConnect.Data;
 using QuantConnect.Data.Custom.Sec;
 using QuantConnect.Logging;
-using System.Data;
 
 namespace QuantConnect.ToolBox.SecDataDownloader
 {
