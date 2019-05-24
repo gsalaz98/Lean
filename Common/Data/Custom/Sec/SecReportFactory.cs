@@ -29,7 +29,7 @@ namespace QuantConnect.Data.Custom.Sec
         /// Factory method creates SEC report by deserializing XML formatted SEC data to <see cref="SecReportSubmission"/> object
         /// </summary>
         /// <param name="rawDataXmlFilePath">Path to XML file containing formatted SEC data</param>
-        public SecReport CreateSecReport(string rawDataXmlFilePath)
+        public ISecReport CreateSecReport(string rawDataXmlFilePath)
         {
             var secReportXml = new XmlDocument();
 

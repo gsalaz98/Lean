@@ -19,10 +19,26 @@ using System.IO;
 
 namespace QuantConnect.Data.Custom.Sec
 {
-    public class SecReport8K : SecReport
+    public class SecReport8K : BaseData, ISecReport
     {
-        public SecReport8K(SecReportSubmission report) : base(report)
+        private SecReportSubmission _report;
+
+        /// <summary>
+        /// Contents of the actual SEC report
+        /// </summary>
+        public SecReportSubmission Report
         {
+            get { return _report; }
+            private set { _report = value; }
+        }
+
+        public SecReport8K()
+        {
+        }
+
+        public SecReport8K(SecReportSubmission report)
+        {
+            Report = report;
         }
 
         /// <summary>

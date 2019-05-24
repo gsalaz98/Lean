@@ -19,10 +19,25 @@ using Newtonsoft.Json;
 
 namespace QuantConnect.Data.Custom.Sec
 {
-    public class SecReport10Q : SecReport
+    public class SecReport10Q : BaseData, ISecReport
     {
-        public SecReport10Q(SecReportSubmission report) : base(report)
+        private SecReportSubmission _report;
+
+        /// <summary>
+        /// Contents of the actual SEC report
+        /// </summary>
+        public SecReportSubmission Report
         {
+            get { return _report; }
+            private set { _report = value; }
+        }
+
+        public SecReport10Q()
+        {
+        }
+        public SecReport10Q(SecReportSubmission report)
+        {
+            Report = report;
         }
 
         /// <summary>

@@ -185,7 +185,7 @@ namespace QuantConnect.ToolBox.SecDataDownloader
                         }
                     }
 
-                    SecReport report;
+                    ISecReport report;
                     try
                     {
                         report = new SecReportFactory().CreateSecReport(rawReportXmlFilePath);
@@ -235,7 +235,7 @@ namespace QuantConnect.ToolBox.SecDataDownloader
         /// </summary>
         /// <param name="report">SEC Report object</param>
         /// <param name="ticker">Symbol ticker</param>
-        public void WriteReport(SecReport report, string ticker)
+        public void WriteReport(ISecReport report, string ticker)
         {
             var reportPath = Path.Combine(Destination, ticker.ToLower(), $"{report.Report.FilingDate:yyyyMMdd}");
             var formTypeNormalized = report.Report.FType.Replace("-", "");
