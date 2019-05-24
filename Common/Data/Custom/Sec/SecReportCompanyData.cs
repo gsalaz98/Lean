@@ -19,16 +19,39 @@ namespace QuantConnect.Data.Custom.Sec
 {
     public class SecReportCompanyData
     {
+        /// <summary>
+        /// Current company name
+        /// </summary>
         [JsonProperty("CONFORMED-NAME")]
         public string ConformedName;
+
+        /// <summary>
+        /// Company's Central Index Key. Used to uniquely identify company filings in SEC's EDGAR system
+        /// </summary>
         [JsonProperty("CIK")]
         public string Cik;
+
+        /// <summary>
+        /// Standard Industrial Classification
+        /// </summary>
         [JsonProperty("ASSIGNED-SIC")]
         public string AssignedSic;
+
+        /// <summary>
+        /// Employer Identification Number
+        /// </summary>
         [JsonProperty("IRS-NUMBER")]
         public string IrsNumber;
+
+        /// <summary>
+        /// State of incorporation
+        /// </summary>
         [JsonProperty("STATE-OF-INCORPORATION")]
         public string StateOfIncorporation;
+
+        /// <summary>
+        /// Day fiscal year ends for given company. Formatted as MMdd
+        /// </summary>
         [JsonProperty("FISCAL-YEAR-END")]
         public string FiscalYearEnd;
 

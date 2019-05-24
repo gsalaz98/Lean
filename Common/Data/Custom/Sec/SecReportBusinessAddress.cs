@@ -19,16 +19,42 @@ namespace QuantConnect.Data.Custom.Sec
 {
     public class SecReportBusinessAddress
     {
+        /// <summary>
+        /// Street Address 1
+        /// </summary>
         [JsonProperty("STREET1")]
         public string StreetOne;
+
+        /// <summary>
+        /// Street Address 2
+        /// </summary>
         [JsonProperty("STREET2")]
         public string StreetTwo;
+
+        /// <summary>
+        /// City
+        /// </summary>
         [JsonProperty("CITY")]
         public string City;
+
+        /// <summary>
+        /// US State
+        /// </summary>
         [JsonProperty("STATE")]
         public string State;
+
+        /// <summary>
+        /// ZIP Code
+        /// </summary>
+        /// <remarks>
+        /// Not as integer because of special ZIP codes and potential dashes
+        /// </remarks>
         [JsonProperty("ZIP")]
         public string Zip;
+
+        /// <summary>
+        /// Business phone number
+        /// </summary>
         [JsonProperty("PHONE")]
         public string Phone;
     }

@@ -20,12 +20,27 @@ namespace QuantConnect.Data.Custom.Sec
 {
     public class SecReportFilingValues 
     {
+        /// <summary>
+        /// SEC Form Type (e.g. 10-Q, 8-K, S-1, etc.)
+        /// </summary>
         [JsonProperty("FORM-TYPE")]
         public string FormType;
+
+        /// <summary>
+        /// ???
+        /// </summary>
         [JsonProperty("ACT")]
         public string Act;
+
+        /// <summary>
+        /// SEC filing number
+        /// </summary>
         [JsonProperty("FILE-NUMBER")]
         public string FileNumber;
+
+        /// <summary>
+        /// Used to access documents in the SEC's Virtual Private Reference Room (VPRR)
+        /// </summary>
         [JsonProperty("FILM-NUMBER")]
         public string FilmNumber;
 

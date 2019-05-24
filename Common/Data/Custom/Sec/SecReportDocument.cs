@@ -19,14 +19,33 @@ namespace QuantConnect.Data.Custom.Sec
 {
     public class SecReportDocument
     {
+        /// <summary>
+        /// Report document type, e.g. 10-Q, 8-K, S-1
+        /// </summary>
         [JsonProperty("TYPE")]
         public string FType;
+
+        /// <summary>
+        /// Nth attachment to the form filed
+        /// </summary>
         [JsonProperty("SEQUENCE")]
         public int Sequence;
+
+        /// <summary>
+        /// File name that the file had when it was uploaded
+        /// </summary>
         [JsonProperty("FILENAME")]
         public string Filename;
+
+        /// <summary>
+        /// Describes attachment contents
+        /// </summary>
         [JsonProperty("DESCRIPTION")]
         public string Description;
+
+        /// <summary>
+        /// Contents of the attachment
+        /// </summary>
         [JsonProperty("TEXT")]
         public string Text;
     }

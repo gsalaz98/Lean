@@ -20,14 +20,33 @@ namespace QuantConnect.Data.Custom.Sec
 {
     public class SecReportFiler
     {
+        /// <summary>
+        /// SEC data containing company data such as company name, cik, etc.
+        /// </summary>
         [JsonProperty("COMPANY-DATA")]
         public SecReportCompanyData CompanyData;
+
+        /// <summary>
+        /// Information regarding the filing itself
+        /// </summary>
         [JsonProperty("FILING-VALUES")]
         public SecReportFilingValues Values;
+        
+        /// <summary>
+        /// Information related to the business' address
+        /// </summary>
         [JsonProperty("BUSINESS-ADDRESS"), JsonConverter(typeof(PossibleListConverter<SecReportBusinessAddress>))]
         public List<SecReportBusinessAddress> BusinessAddress;
+
+        /// <summary>
+        /// Company mailing address information
+        /// </summary>
         [JsonProperty("MAIL-ADDRESS"), JsonConverter(typeof(PossibleListConverter<SecReportMailAddress>))]
         public List<SecReportMailAddress> MailingAddress;
+
+        /// <summary>
+        /// Former company names
+        /// </summary>
         [JsonProperty("FORMER-COMPANY"), JsonConverter(typeof(PossibleListConverter<SecReportFormerCompany>))]
         public List<SecReportFormerCompany> FormerCompanies;
     }

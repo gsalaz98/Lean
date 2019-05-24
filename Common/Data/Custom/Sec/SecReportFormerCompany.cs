@@ -20,8 +20,15 @@ namespace QuantConnect.Data.Custom.Sec
 {
     public class SecReportFormerCompany 
     {
+        /// <summary>
+        /// Previous company name
+        /// </summary>
         [JsonProperty("FORMER-CONFORMED-NAME")]
         public string FormerConformedName;
+
+        /// <summary>
+        /// Date the company name was changed to a new name
+        /// </summary>
         [JsonProperty("DATE-CHANGED"), JsonConverter(typeof(SecReportDateTimeConverter))]
         public DateTime Changed;
     }
