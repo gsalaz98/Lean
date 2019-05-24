@@ -47,9 +47,14 @@ namespace QuantConnect.ToolBox.SecDataDownloader
         /// <summary>
         /// Number of parallel processing jobs we should run at the same time.
         /// Avoid setting this number too high because we may run out of memory while
-        /// attempting to parse very large files that occasionally make their way into processing
+        /// attempting to parse large files.
         /// </summary>
-        public int ParallelProcessingJobs = 5;
+        public int ParallelProcessingJobs = 10;
+        
+        /// <summary>
+        /// Max file size in bytes we're willing to parse. Default is 100Mb
+        /// </summary>
+        public int MaxFileSize = 100000000;
 
         /// <summary>
         /// Destination directory for our files
@@ -114,6 +119,14 @@ namespace QuantConnect.ToolBox.SecDataDownloader
                 throw new Exception("ParallelDownloadJobs should be less than 10 due to SEC request rate limits.");
             }
 
+            // Limit 32-bit application max potential memory size to avoid memory overflows
+            if (IntPtr.Size == 4 && ParallelDownloadJobs * ParallelProcessingJobs * MaxFileSize > 1800000000)
+            {
+                throw new Exception(
+                    "Application is running as a 32bit application, and potential memory overflow can occur. Lower ParallelProcessingJobs and try again"
+                );
+            }
+
             Directory.CreateDirectory(Source);
 
             var dates = new List<DateTime>();
@@ -172,6 +185,9 @@ namespace QuantConnect.ToolBox.SecDataDownloader
                             new ParallelOptions() { MaxDegreeOfParallelism = ParallelProcessingJobs },
                             rawReportFilePath =>
                             {
+                                // Avoid processing files greater than MaxFileSize megabytes
+                                if (MaxFileSize < new FileInfo(rawReportFilePath).Length) return;
+
                                 var rawReportXmlFilePath = $"{rawReportFilePath}.xml";
                                 var factory = new SecReportFactory();
 
@@ -262,6 +278,7 @@ namespace QuantConnect.ToolBox.SecDataDownloader
                 );
 
                 // SEC website only allows a maximum of 10 requests per second.
+                // Sleep just to be sure we're not abusing their rate limits.
                 Thread.Sleep(1000);
             }
 
