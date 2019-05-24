@@ -67,7 +67,7 @@ namespace QuantConnect.Data.Custom.Sec
         /// Contains information regarding who the filer of the report is
         /// </summary>
         [JsonProperty("FILER"), JsonConverter(typeof(PossibleListConverter<SecReportFiler>))]
-        public List<SecReportFiler> Filer = new List<SecReportFiler>();
+        public List<SecReportFiler> Filers = new List<SecReportFiler>();
 
         /// <summary>
         /// Attachments/content associated with the report

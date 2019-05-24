@@ -181,7 +181,7 @@ namespace QuantConnect.ToolBox.SecDataDownloader
 
                         // For the meantime, let's only process .nc files, and deal with corrections later.
                         Parallel.ForEach(
-                            Directory.GetFiles(newDataPath, "*.nc", SearchOption.AllDirectories),
+                            Directory.GetFiles(newDataPath, "*.nc", SearchOption.AllDirectories).ToList(),
                             new ParallelOptions() { MaxDegreeOfParallelism = ParallelProcessingJobs },
                             rawReportFilePath =>
                             {
@@ -254,7 +254,7 @@ namespace QuantConnect.ToolBox.SecDataDownloader
                                     return;
                                 }
 
-                                var companyCik = report.Report.Filer.First().CompanyData.Cik;
+                                var companyCik = report.Report.Filers.First().CompanyData.Cik;
 
                                 List<string> tickers;
                                 if (!CikTicker.TryGetValue(companyCik, out tickers))
