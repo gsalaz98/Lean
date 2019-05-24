@@ -120,7 +120,7 @@ namespace QuantConnect.ToolBox.SecDataDownloader
             }
 
             // Limit 32-bit application max potential memory size to avoid memory overflows
-            if (IntPtr.Size == 4 && ParallelDownloadJobs * ParallelProcessingJobs * MaxFileSize > 1800000000)
+            if (IntPtr.Size == 4 && ParallelDownloadJobs * ParallelProcessingJobs * MaxFileSize > 2000000000)
             {
                 throw new Exception(
                     "Application is running as a 32bit application, and potential memory overflow can occur. Lower ParallelProcessingJobs or ParallelDownloadJobs and try again"
