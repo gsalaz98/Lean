@@ -219,6 +219,7 @@
     <Compile Include="ChartPoint.cs" />
     <Compile Include="Data\Consolidators\CalendarType.cs" />
     <Compile Include="Data\Consolidators\FilteredIdentityDataConsolidator.cs" />
+    <Compile Include="Data\Custom\Sec\ISecReport.cs" />
     <Compile Include="Data\Custom\Sec\SecReportConverters.cs" />
     <Compile Include="Data\Custom\Sec\SecReportBusinessAddress.cs" />
     <Compile Include="Data\Custom\Sec\SecReportCompanyData.cs" />
@@ -231,7 +232,6 @@
     <Compile Include="Data\Custom\Sec\SecReport8K.cs" />
     <Compile Include="Data\Custom\Sec\SecReport10Q.cs" />
     <Compile Include="Data\Custom\Sec\SecReport10K.cs" />
-    <Compile Include="Data\Custom\Sec\SecReport.cs" />
     <Compile Include="Data\Custom\Sec\SecReportSubmission.cs" />
     <Compile Include="Data\Custom\USEnergyInformation.cs" />
     <Compile Include="Data\Fundamental\AssetClassificationHelper.cs" />

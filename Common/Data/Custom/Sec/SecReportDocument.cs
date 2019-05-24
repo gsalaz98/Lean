@@ -38,13 +38,16 @@ namespace QuantConnect.Data.Custom.Sec
         public string Filename;
 
         /// <summary>
-        /// Describes attachment contents
+        /// Attachment content(s) description
         /// </summary>
         [JsonProperty("DESCRIPTION")]
         public string Description;
 
         /// <summary>
-        /// Contents of the attachment
+        /// Content of the attachment. This is the field that will most likely contain
+        /// information related to financial reports. Sometimes, XML will
+        /// be present in the data. If the first line starts with "&lt;XML&gt;", then
+        /// XML data will be present in the contents of the document
         /// </summary>
         [JsonProperty("TEXT")]
         public string Text;

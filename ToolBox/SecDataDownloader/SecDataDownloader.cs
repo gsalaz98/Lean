@@ -20,12 +20,14 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Security;
+using System.Threading.Tasks;
 using ICSharpCode.SharpZipLib.Tar;
 using ICSharpCode.SharpZipLib.GZip;
 using Newtonsoft.Json;
 using QuantConnect.Data;
 using QuantConnect.Data.Custom.Sec;
 using QuantConnect.Logging;
+using System.Threading;
 
 namespace QuantConnect.ToolBox.SecDataDownloader
 {
@@ -35,11 +37,29 @@ namespace QuantConnect.ToolBox.SecDataDownloader
         /// Base URL to query the SEC website for reports
         /// </summary>
         public string BaseUrl = "https://www.sec.gov/Archives/edgar/Feed";
+        
+        /// <summary>
+        /// Number of parallel download jobs we should run.
+        /// WARNING: This number should be less than 10 due to SEC request rate limits.
+        /// </summary>
+        public int ParallelDownloadJobs = 2;
+
+        /// <summary>
+        /// Number of parallel processing jobs we should run at the same time.
+        /// Avoid setting this number too high because we may run out of memory while
+        /// attempting to parse very large files that occasionally make their way into processing
+        /// </summary>
+        public int ParallelProcessingJobs = 5;
 
         /// <summary>
         /// Destination directory for our files
         /// </summary>
-        public string Destination = Path.Combine(Globals.DataFolder, "equity", Market.USA, "alternative", "sec");
+        public readonly string Destination = Path.Combine(Globals.DataFolder, "equity", Market.USA, "alternative", "sec");
+
+        /// <summary>
+        /// Directory we extract SEC raw data to
+        /// </summary>
+        public readonly string Source = Path.Combine(Globals.DataFolder, "equity", Market.USA, "alternative", "sec", "raw_data");
 
         /// <summary>
         /// Assets keyed by CIK used to resolve underlying ticker 
@@ -55,8 +75,11 @@ namespace QuantConnect.ToolBox.SecDataDownloader
         /// Populates the <see cref="CikTicker" /> dictionary with CIK and ticker corresponding to the CIK.
         /// Data is formatted as: Ticker\tCIK. Data is retrieved from SEC website.
         /// </summary>
-        public SecDataDownloader()
+        public SecDataDownloader(string rawDataPath = null, string rawDataDestination = null)
         {
+            Source = rawDataPath ?? Source;
+            Destination = rawDataDestination ?? Destination;
+
             using (var client = new WebClient())
             {
                 var knownTickerFolder = Path.Combine(Globals.DataFolder, "equity", "usa", "daily");
@@ -86,143 +109,163 @@ namespace QuantConnect.ToolBox.SecDataDownloader
 
         public IEnumerable<BaseData> Get(Symbol symbol, Resolution resolution, DateTime startUtc, DateTime endUtc)
         {
-            var rawPath = Path.Combine(Destination, "raw_data");
-
-            Directory.CreateDirectory(rawPath);
-
-            for (var currentDate = startUtc; currentDate <= endUtc; currentDate = currentDate.AddDays(1))
+            if (ParallelDownloadJobs > 10)
             {
-                // SEC does not publish documents on federal US holidays or weekends
-                if (!currentDate.IsCommonBusinessDay() || USHoliday.Dates.Contains(currentDate))
-                {
-                    continue;
-                }
-
-                var quarter = currentDate < new DateTime(currentDate.Year, 4, 1) ? "QTR1" :
-                    currentDate < new DateTime(currentDate.Year, 7, 1) ? "QTR2" :
-                    currentDate < new DateTime(currentDate.Year, 10, 1) ? "QTR3" :
-                    "QTR4";
-
-                var newDataPath = Path.Combine(rawPath, $"{currentDate:yyyyMMdd}"); ;
-
-                try
-                {
-                    using (var client = new WebClient())
-                    {
-                        using (var data = client.OpenRead(
-                            $"{BaseUrl}/{currentDate.Year}/{quarter}/{currentDate:yyyyMMdd}.nc.tar.gz"
-                        ))
-                        {
-                            using (var archive = TarArchive.CreateInputTarArchive(new GZipInputStream(data)))
-                            {
-                                Directory.CreateDirectory(newDataPath);
-                                archive.ExtractContents(newDataPath);
-
-                                Log.Trace($"Extracted SEC data to path {newDataPath}");
-                            }
-                        }
-                    }
-                }
-                catch (WebException)
-                {
-                    Log.Error($"Report files not found on date {currentDate:yyyy-MM-dd}");
-                }
-                catch (Exception e)
-                {
-                    Log.Error(e.ToString());
-                }
-
-                // For the meantime, let's only process .nc files, and deal with corrections later.
-                foreach (var rawReportFilePath in Directory.GetFiles(newDataPath, "*.nc", SearchOption.AllDirectories))
-                {
-                    var rawReportXmlFilePath = $"{rawReportFilePath}.xml";
-                    var factory = new SecReportFactory();
-
-                    using (var writer = new StreamWriter(rawReportXmlFilePath))
-                    {
-                        // We need to escape any nested XML to ensure our deserialization happens smoothly
-                        var parsingText = false;
-
-                        foreach (var line in File.ReadLines(rawReportFilePath))
-                        {
-                            var newTextLine = line;
-                            var currentTagName = factory.GetTagNameFromLine(line);
-
-                            // This tag is present rarely in SEC reports, but is unclosed when encountered.
-                            // Verified by searching with ripgrep for "CONFIRMING-COPY"
-                            if (currentTagName == "CONFIRMING-COPY")
-                            {
-                                continue;
-                            }
-
-                            // Don't encode the closing tag
-                            if (currentTagName == "/TEXT")
-                            {
-                                parsingText = false;
-                            }
-
-                            // Encode all contents inside tags to prevent errors in XML parsing.
-                            // The json deserializer will convert these values back to their original form
-                            if (!parsingText && factory.HasValue(line))
-                            {
-                                newTextLine =
-                                    $"<{currentTagName}>{SecurityElement.Escape(factory.GetTagValueFromLine(line))}</{currentTagName}>";
-                            }
-                            // Escape all contents inside TEXT tags
-                            else if (parsingText)
-                            {
-                                newTextLine = SecurityElement.Escape(line);
-                            }
-
-                            // Don't encode the opening tag
-                            if (currentTagName == "TEXT")
-                            {
-                                parsingText = true;
-                            }
-
-                            writer.WriteLine(newTextLine);
-                        }
-                    }
-
-                    ISecReport report;
-                    try
-                    {
-                        report = new SecReportFactory().CreateSecReport(rawReportXmlFilePath);
-                    }
-                    catch (DataException e)
-                    {
-                        Log.Trace(e.Message);
-                        continue;
-                    }
-                    catch (Exception e)
-                    {
-                        Log.Error($"XML file path: {rawReportXmlFilePath}");
-                        Log.Error(e.ToString());
-                        continue;
-                    }
-
-                    var companyCik = report.Report.Filer.First().CompanyData.Cik;
-
-                    List<string> tickers;
-                    if (!CikTicker.TryGetValue(companyCik, out tickers))
-                    {
-                        tickers = new List<string>();
-                    }
-
-                    // Default to company CIK if no known ticker is found
-                    var ticker = tickers.Where(secTicker => KnownEquities.Contains(secTicker))
-                        .DefaultIfEmpty(companyCik)
-                        .First();
-
-                    WriteReport(report, ticker);
-                    File.Delete(rawReportFilePath);
-                    File.Delete(rawReportXmlFilePath);
-                }
-
-                Directory.Delete(newDataPath, true);
+                throw new Exception("ParallelDownloadJobs should be less than 10 due to SEC request rate limits.");
             }
 
-            Directory.Delete(rawPath, true);
+            Directory.CreateDirectory(Source);
+
+            var dates = new List<DateTime>();
+            for (var date = startUtc; date <= endUtc; date = date.AddDays(1))
+            {
+                dates.Add(date);
+            }
+
+            for (var i = 0; i < dates.Count; i += ParallelDownloadJobs)
+            {
+                Parallel.ForEach(dates.Skip(i).Take(ParallelDownloadJobs), currentDate =>
+                    {
+                        // SEC does not publish documents on federal US holidays or weekends
+                        if (!currentDate.IsCommonBusinessDay() || USHoliday.Dates.Contains(currentDate))
+                        {
+                            return;
+                        }
+
+                        var quarter = currentDate < new DateTime(currentDate.Year, 4, 1) ? "QTR1" :
+                            currentDate < new DateTime(currentDate.Year, 7, 1) ? "QTR2" :
+                            currentDate < new DateTime(currentDate.Year, 10, 1) ? "QTR3" :
+                            "QTR4";
+
+                        var newDataPath = Path.Combine(Source, $"{currentDate:yyyyMMdd}");
+
+                        try
+                        {
+                            using (var client = new WebClient())
+                            {
+                                using (var data = client.OpenRead(
+                                    $"{BaseUrl}/{currentDate.Year}/{quarter}/{currentDate:yyyyMMdd}.nc.tar.gz"
+                                ))
+                                {
+                                    using (var archive = TarArchive.CreateInputTarArchive(new GZipInputStream(data)))
+                                    {
+                                        Directory.CreateDirectory(newDataPath);
+                                        archive.ExtractContents(newDataPath);
+
+                                        Log.Trace($"Extracted SEC data to path {newDataPath}");
+                                    }
+                                }
+                            }
+                        }
+                        catch (WebException)
+                        {
+                            Log.Error($"Report files not found on date {currentDate:yyyy-MM-dd}");
+                        }
+                        catch (Exception e)
+                        {
+                            Log.Error(e.ToString());
+                        }
+
+                        // For the meantime, let's only process .nc files, and deal with corrections later.
+                        Parallel.ForEach(
+                            Directory.GetFiles(newDataPath, "*.nc", SearchOption.AllDirectories),
+                            new ParallelOptions() { MaxDegreeOfParallelism = ParallelProcessingJobs },
+                            rawReportFilePath =>
+                            {
+                                var rawReportXmlFilePath = $"{rawReportFilePath}.xml";
+                                var factory = new SecReportFactory();
+
+                                using (var writer = new StreamWriter(rawReportXmlFilePath))
+                                {
+                                    // We need to escape any nested XML to ensure our deserialization happens smoothly
+                                    var parsingText = false;
+
+                                    foreach (var line in File.ReadLines(rawReportFilePath))
+                                    {
+                                        var newTextLine = line;
+                                        var currentTagName = factory.GetTagNameFromLine(line);
+
+                                        // This tag is present rarely in SEC reports, but is unclosed when encountered.
+                                        // Verified by searching with ripgrep for "CONFIRMING-COPY"
+                                        if (currentTagName == "CONFIRMING-COPY")
+                                        {
+                                            return;
+                                        }
+
+                                        // Don't encode the closing tag
+                                        if (currentTagName == "/TEXT")
+                                        {
+                                            parsingText = false;
+                                        }
+
+                                        // Encode all contents inside tags to prevent errors in XML parsing.
+                                        // The json deserializer will convert these values back to their original form
+                                        if (!parsingText && factory.HasValue(line))
+                                        {
+                                            newTextLine =
+                                                $"<{currentTagName}>{SecurityElement.Escape(factory.GetTagValueFromLine(line))}</{currentTagName}>";
+                                        }
+                                        // Escape all contents inside TEXT tags
+                                        else if (parsingText)
+                                        {
+                                            newTextLine = SecurityElement.Escape(line);
+                                        }
+
+                                        // Don't encode the opening tag
+                                        if (currentTagName == "TEXT")
+                                        {
+                                            parsingText = true;
+                                        }
+
+                                        writer.WriteLine(newTextLine);
+                                    }
+                                }
+
+                                ISecReport report;
+                                try
+                                {
+                                    report = new SecReportFactory().CreateSecReport(rawReportXmlFilePath);
+                                }
+                                catch (DataException e)
+                                {
+                                    Log.Trace(e.Message);
+                                    return;
+                                }
+                                catch (Exception e)
+                                {
+                                    Log.Error($"XML file path: {rawReportXmlFilePath}");
+                                    Log.Error(e.ToString());
+                                    return;
+                                }
+
+                                var companyCik = report.Report.Filer.First().CompanyData.Cik;
+
+                                List<string> tickers;
+                                if (!CikTicker.TryGetValue(companyCik, out tickers))
+                                {
+                                    tickers = new List<string>();
+                                }
+
+                                // Default to company CIK if no known ticker is found
+                                var ticker = tickers.Where(secTicker => KnownEquities.Contains(secTicker))
+                                    .DefaultIfEmpty(companyCik)
+                                    .First();
+
+                                WriteReport(report, ticker);
+                                File.Delete(rawReportFilePath);
+                                File.Delete(rawReportXmlFilePath);
+                            }
+                        );
+
+                        Directory.Delete(newDataPath, true);
+                    }
+                );
+
+                // SEC website only allows a maximum of 10 requests per second.
+                Thread.Sleep(1000);
+            }
+
+            Directory.Delete(Source, true);
 
             return new List<BaseData>();
         }
