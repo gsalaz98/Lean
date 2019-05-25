@@ -15,6 +15,7 @@
 
 using System;
 using System.IO;
+using System.Linq;
 using Newtonsoft.Json;
 
 namespace QuantConnect.Data.Custom.Sec
@@ -35,6 +36,7 @@ namespace QuantConnect.Data.Custom.Sec
         public SecReport10Q()
         {
         }
+
         public SecReport10Q(SecReportSubmission report)
         {
             Report = report;
@@ -78,11 +80,6 @@ namespace QuantConnect.Data.Custom.Sec
         /// <returns></returns>
         public override BaseData Reader(SubscriptionDataConfig config, string line, DateTime date, bool isLiveMode)
         {
-            var report = new SecReport10Q(JsonConvert.DeserializeObject<SecReportSubmission>(line));
-            report.Time = report.Report.FilingDate;
-            report.Symbol = config.Symbol;
-
-            return report;
         }
     }
 }

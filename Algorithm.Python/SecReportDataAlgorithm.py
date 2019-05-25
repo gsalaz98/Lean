@@ -19,46 +19,55 @@ AddReference("QuantConnect.Common")
 from System import *
 from QuantConnect import *
 from QuantConnect.Algorithm import *
-from QuantConnect.Data.Custom.Tiingo import *
+from QuantConnect.Data.Custom.Sec import *
 
 ### <summary>
-### This example algorithm shows how to import and use Tiingo daily prices data.
+### Demonstration algorithm showing how to use and access SEC data
 ### </summary>
-### <meta name="tag" content="strategy example" />
+### <meta name="tag" content="fundamental" />
 ### <meta name="tag" content="using data" />
 ### <meta name="tag" content="custom data" />
-### <meta name="tag" content="tiingo" />
+### <meta name="tag" content="SEC" />
 class TiingoDailyDataAlgorithm(QCAlgorithm):
 
     def Initialize(self):
         # Initialise the data and resolution required, as well as the cash and start-end dates for your algorithm. All algorithms must initialized.
-        self.SetStartDate(2017, 1, 1)
-        self.SetEndDate(2017, 12, 31)
+        self.SetStartDate(2019, 5, 1)
+        self.SetEndDate(2019, 5, 10)
         self.SetCash(100000)
 
-        # Set your Tiingo API Token here
-        Tiingo.SetAuthCode("my-tiingo-api-token")
-
         self.ticker = "AAPL"
-        self.symbol = self.AddData(TiingoDailyData, self.ticker, Resolution.Daily).Symbol
-
-        self.emaFast = self.EMA(self.symbol, 5)
-        self.emaSlow = self.EMA(self.symbol, 10)
-
+        self.symbol = self.AddData(SecReport10K, self.ticker, Resolution.Daily).Symbol
 
     def OnData(self, slice):
         # OnData event is the primary entry point for your algorithm. Each new data point will be pumped in here.
-
         if not slice.ContainsKey(self.ticker): return
 
-        # Extract Tiingo data from the slice
-        row = slice[self.ticker]
+        data = slice[self.ticker]
+        report = data[self.symbol].Report
 
-        self.Log(f"{self.Time} - {row.Symbol.Value} - {row.Close} {row.Value} {row.Price} - EmaFast:{self.emaFast} - EmaSlow:{self.emaSlow}")
+        self.Log(f"Form Type {report.FType}")
+        self.Log(f"Filing Date: {str(report.FilingDate)}")
 
-        # Simple EMA cross
-        if not self.Portfolio.Invested and self.emaFast > self.emaSlow:
-            self.SetHoldings(self.symbol, 1)
+        for filer in report.Filers:
+            self.Log(f"Filing company name: {filer.CommpanyData.ConformedName}")
+            self.Log(f"Filing company CIK: {filer.CompanyData.Cik}")
+            self.Log(f"Filing company EIN: {filer.CompanyData.IrsNumber}")
 
-        elif self.Portfolio.Invested and self.emaFast < self.emaSlow:
-            self.Liquidate(self.symbol)
+            for formerCompany in filer.FormerCompanies:
+                self.Log(f"Former company name of {filer.CompanyData.ConformedName}: {formerCompany.FormerConformedName}")
+                self.Log(f"Date of company name change: {str(formerCompany.Changed)}")
+
+
+        # SEC documents can come in multiple documents.
+        # For multi-document reports, sometimes the document contents after the first document
+        # are files that have a binary format, such as JPG and PDF files
+        for document in report.Documents:
+            self.Log(f"Filename: {document.Filename}")
+            self.Log(f"Document description: {document.Description}")
+
+            # Print sample of contents contained within the document
+            self.Log(document.Text[:10000])
+            self.Log("=================")
+
+

@@ -14,6 +14,7 @@
 */
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.IO;
@@ -21,18 +22,24 @@ using System.Linq;
 using System.Net;
 using System.Security;
 using System.Threading.Tasks;
+using System.Threading;
 using ICSharpCode.SharpZipLib.Tar;
 using ICSharpCode.SharpZipLib.GZip;
 using Newtonsoft.Json;
 using QuantConnect.Data;
 using QuantConnect.Data.Custom.Sec;
 using QuantConnect.Logging;
-using System.Threading;
+
 
 namespace QuantConnect.ToolBox.SecDataDownloader
 {
     public class SecDataDownloader : IDataDownloader
     {
+        /// <summary>
+        /// Keyed by file path we want to write to with values as mutex
+        /// </summary>
+        private ConcurrentDictionary<string, object> _locks = new ConcurrentDictionary<string, object>();
+
         /// <summary>
         /// Base URL to query the SEC website for reports
         /// </summary>
@@ -69,12 +76,17 @@ namespace QuantConnect.ToolBox.SecDataDownloader
         /// <summary>
         /// Assets keyed by CIK used to resolve underlying ticker 
         /// </summary>
-        public Dictionary<string, List<string>> CikTicker = new Dictionary<string, List<string>>();
+        public readonly Dictionary<string, List<string>> CikTicker = new Dictionary<string, List<string>>();
 
         /// <summary>
         /// List of known equities taken from the daily data folder
         /// </summary>
         public List<string> KnownEquities;
+
+        /// <summary>
+        /// Source folder containing all known equities
+        /// </summary>
+        public string KnownEquityFolder = Path.Combine(Globals.DataFolder, "equity", "usa", "daily");
 
         /// <summary>
         /// Populates the <see cref="CikTicker" /> dictionary with CIK and ticker corresponding to the CIK.
@@ -87,7 +99,6 @@ namespace QuantConnect.ToolBox.SecDataDownloader
 
             using (var client = new WebClient())
             {
-                var knownTickerFolder = Path.Combine(Globals.DataFolder, "equity", "usa", "daily");
                 var data = client.DownloadString("https://www.sec.gov/include/ticker.txt");
 
                 data.Split('\n')
@@ -106,7 +117,7 @@ namespace QuantConnect.ToolBox.SecDataDownloader
                             CikTicker[cikFormatted].Add(tickerCik[0]);
                         });
 
-                KnownEquities = Directory.GetFiles(knownTickerFolder)
+                KnownEquities = Directory.GetFiles(KnownEquityFolder)
                     .Select(x => Path.GetFileNameWithoutExtension(x).ToLower())
                     .ToList();
             }
@@ -240,7 +251,7 @@ namespace QuantConnect.ToolBox.SecDataDownloader
                                 ISecReport report;
                                 try
                                 {
-                                    report = new SecReportFactory().CreateSecReport(rawReportXmlFilePath);
+                                    report = factory.CreateSecReport(rawReportXmlFilePath);
                                 }
                                 catch (DataException e)
                                 {
@@ -268,6 +279,7 @@ namespace QuantConnect.ToolBox.SecDataDownloader
                                     .First();
 
                                 WriteReport(report, ticker);
+
                                 File.Delete(rawReportFilePath);
                                 File.Delete(rawReportXmlFilePath);
                             }
@@ -280,6 +292,12 @@ namespace QuantConnect.ToolBox.SecDataDownloader
                 // SEC website only allows a maximum of 10 requests per second.
                 // Sleep just to be sure we're not abusing their rate limits.
                 Thread.Sleep(1000);
+            }
+
+            foreach (var serializedJsonFile in Directory.GetFiles(Destination, "*.json", SearchOption.AllDirectories))
+            {
+                var reportPath = Path.GetDirectoryName(serializedJsonFile);
+                Compression.ZipDirectory(reportPath, $"{reportPath}.zip", false);
             }
 
             Directory.Delete(Source, true);
@@ -299,16 +317,31 @@ namespace QuantConnect.ToolBox.SecDataDownloader
             var reportPath = Path.Combine(Destination, ticker.ToLower(), $"{report.Report.FilingDate:yyyyMMdd}");
             var formTypeNormalized = report.Report.FType.Replace("-", "");
             var reportFilePath = $"{reportPath}_{formTypeNormalized}";
+            var reportFile = Path.Combine(reportFilePath, $"{formTypeNormalized}.json");
 
             Directory.CreateDirectory(reportFilePath);
 
-            using (var writer = new StreamWriter(Path.Combine(reportFilePath, $"{formTypeNormalized}.json")))
-            {
-                writer.Write(JsonConvert.SerializeObject(report.Report, Formatting.None));
-            }
+            // For 8-K reports, multiple files can exist in a single day,
+            // which can cause some issues with Parallel.ForEach
+            var fileLock = _locks.GetOrAdd(reportFile, _ => new object());
 
-            Compression.ZipDirectory(reportFilePath, $"{reportFilePath}.zip", false);
-            Directory.Delete(reportFilePath, true);
+            lock (fileLock)
+            {
+                var reports = new List<SecReportSubmission> {report.Report};
+
+                if (File.Exists(reportFile))
+                {
+                    var existingReport = JsonConvert.DeserializeObject<List<SecReportSubmission>>(File.ReadAllText(reportFile));
+                    reports.AddRange(existingReport);
+
+                    Log.Trace($"Added a new entry to existing report file {reportFile}");
+                }
+
+                using (var writer = new StreamWriter(reportFile, false))
+                {
+                    writer.Write(JsonConvert.SerializeObject(reports, Formatting.None));
+                }
+            }
         }
     }
 }

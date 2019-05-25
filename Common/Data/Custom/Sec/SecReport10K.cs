@@ -32,10 +32,6 @@ namespace QuantConnect.Data.Custom.Sec
             private set { _report = value; }
         }
 
-        public SecReport10K()
-        {
-        }
-
         public SecReport10K(SecReportSubmission report)
         {
             Report = report;
@@ -79,11 +75,6 @@ namespace QuantConnect.Data.Custom.Sec
         /// <returns></returns>
         public override BaseData Reader(SubscriptionDataConfig config, string line, DateTime date, bool isLiveMode)
         {
-            var report = new SecReport10K(JsonConvert.DeserializeObject<SecReportSubmission>(line));
-            report.Time = report.Report.FilingDate;
-            report.Symbol = config.Symbol;
-
-            return report;
         }
     }
 }

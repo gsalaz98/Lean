@@ -13,6 +13,8 @@
  * limitations under the License.
 */
 
+using System.Collections.Generic;
+
 namespace QuantConnect.Data.Custom.Sec
 {
     public interface ISecReport
@@ -20,6 +22,7 @@ namespace QuantConnect.Data.Custom.Sec
         /// <summary>
         /// Contents of the actual SEC report
         /// </summary>
+        
         SecReportSubmission Report { get; }
     }
 }

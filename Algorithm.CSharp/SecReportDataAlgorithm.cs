@@ -23,6 +23,7 @@ namespace QuantConnect.Algorithm.CSharp
     /// Demonstration algorithm showing how to use and access SEC data
     /// </summary>
     /// <meta name="tag" content="fundamental" />
+    /// <meta name="tag" content="using data" />
     /// <meta name="tag" content="custom data" />
     /// <meta name="tag" content="SEC" />
     public class SecReportDataAlgorithm : QCAlgorithm
@@ -36,12 +37,11 @@ namespace QuantConnect.Algorithm.CSharp
         /// </summary>
         public override void Initialize()
         {
-            SetCash(100000);
             SetStartDate(2019, 5, 1);
             SetEndDate(2019, 5, 10);
+            SetCash(100000);
 
-            _symbol = AddEquity(Ticker, Resolution.Daily).Symbol;
-            AddData<SecReport10Q>(Ticker);
+            _symbol = AddData<SecReport10Q>(Ticker).Symbol;
         }
 
         public override void OnData(Slice slice)
@@ -51,37 +51,36 @@ namespace QuantConnect.Algorithm.CSharp
             // We only want SEC data
             if (!data.ContainsKey(_symbol)) return;
 
-            var report = data[_symbol].Report;
-
-            Log($"Form Type {report.FType}");
-            Log($"Filing Date: {report.FilingDate:yyyy-MM-dd}");
-
-            foreach (var filer in report.Filers)
+            foreach (var submission in data.Values)
             {
-                Log($"Filing company name: {filer.CompanyData.ConformedName}");
-                Log($"Filing company CIK: {filer.CompanyData.Cik}");
-                Log($"Filing company EIN: {filer.CompanyData.IrsNumber}");
+                Log($"Form Type {submission.Report.FType}");
+                Log($"Filing Date: {submission.Report.FilingDate:yyyy-MM-dd}");
 
-                foreach (var formerCompany in filer.FormerCompanies)
+                foreach (var filer in submission.Report.Filers)
                 {
-                    Log(
-                        $"Former company name of {filer.CompanyData.ConformedName}: {formerCompany.FormerConformedName}"
-                    );
-                    Log($"Date of company name change: ${formerCompany.Changed:yyyy-MM-dd}");
+                    Log($"Filing company name: {filer.CompanyData.ConformedName}");
+                    Log($"Filing company CIK: {filer.CompanyData.Cik}");
+                    Log($"Filing company EIN: {filer.CompanyData.IrsNumber}");
+
+                    foreach (var formerCompany in filer.FormerCompanies)
+                    {
+                        Log($"Former company name of {filer.CompanyData.ConformedName}: {formerCompany.FormerConformedName}");
+                        Log($"Date of company name change: ${formerCompany.Changed:yyyy-MM-dd}");
+                    }
                 }
-            }
 
-            // SEC documents can come in multiple documents.
-            // For multi-document reports, sometimes the document contents after the first document
-            // are files that have a binary format, such as JPG and PDF files
-            foreach (var document in report.Documents)
-            {
-                Log($"Filename: {document.Filename}");
-                Log($"Document description: {document.Description}");
+                // SEC documents can come in multiple documents.
+                // For multi-document reports, sometimes the document contents after the first document
+                // are files that have a binary format, such as JPG and PDF files
+                foreach (var document in submission.Report.Documents)
+                {
+                    Log($"Filename: {document.Filename}");
+                    Log($"Document description: {document.Description}");
 
-                // Print sample of contents contained within the document
-                Log(document.Text.Substring(0, 10000));
-                Log("=================");
+                    // Print sample of contents contained within the document
+                    Log(document.Text.Substring(0, 10000));
+                    Log("=================");
+                }
             }
         }
     }

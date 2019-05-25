@@ -15,8 +15,9 @@
 
 using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 using System.Data;
-using System.IO;
+using System.Linq;
 using System.Xml;
 using QuantConnect.Logging;
 using Formatting = Newtonsoft.Json.Formatting;
@@ -26,7 +27,7 @@ namespace QuantConnect.Data.Custom.Sec
     public class SecReportFactory
     {
         /// <summary>
-        /// Factory method creates SEC report by deserializing XML formatted SEC data to <see cref="SecReportSubmission"/> object
+        /// Factory method creates SEC report by deserializing XML formatted SEC data to <see cref="SecReportCollection"/> 
         /// </summary>
         /// <param name="rawDataXmlFilePath">Path to XML file containing formatted SEC data</param>
         public ISecReport CreateSecReport(string rawDataXmlFilePath)
@@ -46,7 +47,9 @@ namespace QuantConnect.Data.Custom.Sec
             var json = JsonConvert.SerializeXmlNode(secReportXml, Formatting.None, true);
             var secReportDocument = JsonConvert.DeserializeObject<SecReportSubmission>(json);
 
-            switch (secReportDocument.FType)
+            var formType = secReportDocument.FType;
+
+            switch (formType)
             {
                 case "8-K":
                     return new SecReport8K(secReportDocument);
@@ -55,7 +58,7 @@ namespace QuantConnect.Data.Custom.Sec
                 case "10-Q":
                     return new SecReport10Q(secReportDocument);
                 default:
-                    throw new DataException($"SEC form type {secReportDocument.FType} is not supported at this time");
+                    throw new DataException($"SEC form type {formType} is not supported at this time");
             }
         }
 
