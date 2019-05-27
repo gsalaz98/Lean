@@ -1,6 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -9,7 +8,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>QuantConnect.ToolBox</RootNamespace>
     <AssemblyName>QuantConnect.ToolBox</AssemblyName>
-    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
+    <TargetFramework>netcoreapp2.2</TargetFramework>
     <FileAlignment>512</FileAlignment>
     <LangVersion>6</LangVersion>
     <TargetFrameworkProfile />
@@ -204,100 +203,6 @@
     </When>
   </Choose>
   <ItemGroup>
-    <Compile Include="BitfinexDownloader\BitfinexDataDownloader.cs" />
-    <Compile Include="BitfinexDownloader\BitfinexDownloaderProgram.cs" />
-    <Compile Include="CoinApiDataConverter\CoinApiDataConverterProgram.cs" />
-    <Compile Include="CoinApiDataConverter\CoinApiDataConverter.cs" />
-    <Compile Include="CoinApiDataConverter\CoinApiDataReader.cs" />
-    <Compile Include="CoinApiDataConverter\CoinApiEntryData.cs" />
-    <Compile Include="GDAXDownloader\GDAXDownloader.cs" />
-    <Compile Include="GDAXDownloader\GDAXDownloaderProgram.cs" />
-    <Compile Include="GzipStreamProvider.cs" />
-    <Compile Include="IBDownloader\IBDataDownloader.cs" />
-    <Compile Include="IBDownloader\IBDownloaderProgram.cs" />
-    <Compile Include="IEX\IEXDataDownloader.cs" />
-    <Compile Include="IEX\IEXDownloaderProgram.cs" />
-    <Compile Include="IVolatilityEquityConverter\IVolatilityEquityConverterProgram.cs" />
-    <Compile Include="Program.cs" />
-    <Compile Include="RandomDataGenerator\DividendSplitMapGenerator.cs" />
-    <Compile Include="RandomDataGenerator\ConsoleLeveledOutput.cs" />
-    <Compile Include="RandomDataGenerator\DataDensity.cs" />
-    <Compile Include="RandomDataGenerator\RandomDataGeneratorSettings.cs" />
-    <Compile Include="RandomDataGenerator\IRandomValueGenerator.cs" />
-    <Compile Include="RandomDataGenerator\RandomDataGeneratorProgram.cs" />
-    <Compile Include="RandomDataGenerator\RandomValueGenerator.cs" />
-    <Compile Include="RandomDataGenerator\RandomValueGeneratorException.cs" />
-    <Compile Include="RandomDataGenerator\SymbolGenerator.cs" />
-    <Compile Include="RandomDataGenerator\TickGenerator.cs" />
-    <Compile Include="RandomDataGenerator\TooManyFailedAttemptsException.cs" />
-    <Compile Include="TickAggregator.cs" />
-    <Compile Include="AlgoSeekFuturesConverter\AlgoSeekFuturesConverter.cs" />
-    <Compile Include="AlgoSeekFuturesConverter\AlgoSeekFuturesProcessor.cs" />
-    <Compile Include="AlgoSeekFuturesConverter\AlgoSeekFuturesReader.cs" />
-    <Compile Include="AlgoSeekFuturesConverter\AlgoSeekFuturesProgram.cs" />
-    <Compile Include="AlgoSeekOptionsConverter\AlgoSeekOptionsConverter.cs" />
-    <Compile Include="AlgoSeekOptionsConverter\AlgoSeekOptionsProcessor.cs" />
-    <Compile Include="AlgoSeekOptionsConverter\AlgoSeekOptionsReader.cs" />
-    <Compile Include="AlgoSeekOptionsConverter\AlgoSeekOptionsConverterProgram.cs" />
-    <Compile Include="Bz2StreamProvider.cs" />
-    <Compile Include="CoarseUniverseGenerator\CoarseUniverseGeneratorProgram.cs" />
-    <Compile Include="ConsolidatorDataProcessor.cs" />
-    <Compile Include="CryptoiqDownloader\CryptoiqBitcoin.cs" />
-    <Compile Include="CryptoiqDownloader\CryptoiqDownloader.cs" />
-    <Compile Include="CryptoiqDownloader\CryptoiqDownloaderProgram.cs" />
-    <Compile Include="DukascopyDownloader\DukascopyDataDownloader.cs" />
-    <Compile Include="DukascopyDownloader\DukascopySymbolMapper.cs" />
-    <Compile Include="DukascopyDownloader\DukascopyDownloaderProgram.cs" />
-    <Compile Include="FactorFileGenerator.cs" />
-    <Compile Include="FileStreamProvider.cs" />
-    <Compile Include="FilteredDataProcessor.cs" />
-    <Compile Include="FxcmVolumeDownloader\FxcmVolumeAuxiliaryMethods.cs" />
-    <Compile Include="FxcmVolumeDownloader\FxcmVolumeWriter.cs" />
-    <Compile Include="FxcmVolumeDownloader\FxcmVolumeDownloader.cs" />
-    <Compile Include="FxcmVolumeDownloader\FxcmVolumeDownloadProgram.cs" />
-    <Compile Include="FxcmDownloader\FxcmDataDownloader.cs" />
-    <Compile Include="FxcmDownloader\FxcmDownloaderProgram.cs" />
-    <Compile Include="IDataProcessor.cs" />
-    <Compile Include="IEX\IEXDataQueueHandler.cs" />
-    <Compile Include="IQFeed\IQFeedDataQueueHandler.cs" />
-    <Compile Include="IQFeed\IQFeedDataQueueUniverseProvider.cs" />
-    <Compile Include="IQFeed\IQ\DataStructures.cs" />
-    <Compile Include="IQFeed\IQ\IQAdminSocketClient.cs" />
-    <Compile Include="IQFeed\IQ\IQConnect.cs" />
-    <Compile Include="IQFeed\IQ\IQCredentials.cs" />
-    <Compile Include="IQFeed\IQ\IQLevel1Client.cs" />
-    <Compile Include="IQFeed\IQ\IQLookupHistorySymbolClient.cs" />
-    <Compile Include="IQFeed\IQ\IQLookupTableClient.cs" />
-    <Compile Include="IQFeed\IQ\IQSocket.cs" />
-    <Compile Include="IQFeed\IQ\SocketClient.cs" />
-    <Compile Include="IStreamParser.cs" />
-    <Compile Include="IStreamProvider.cs" />
-    <Compile Include="KaikoDataConverter\KaikoDataConverterProgram.cs" />
-    <Compile Include="KrakenDataDownloader\KrakenDataDownloader.cs" />
-    <Compile Include="KrakenDataDownloader\KrakenDownloaderProgram.cs" />
-    <Compile Include="LazyStreamWriter.cs" />
-    <Compile Include="LeanDataReader.cs" />
-    <Compile Include="LeanDataWriter.cs" />
-    <Compile Include="LeanInstrument.cs" />
-    <Compile Include="LeanParser.cs" />
-    <Compile Include="NseMarketDataConverter\NseMarketDataConverterProgram.cs" />
-    <Compile Include="OandaDownloader\OandaDataDownloader.cs" />
-    <Compile Include="OandaDownloader\OandaDownloaderProgram.cs" />
-    <Compile Include="PipeDataProcessor.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="QuandlBitfinexDownloader\QuandlBitfinexDownloaderProgram.cs" />
-    <Compile Include="QuandlBitfinexDownloader\QuandlBitfinexDownloader.cs" />
-    <Compile Include="QuantQuoteConverter\QuantQuoteConverterProgram.cs" />
-    <Compile Include="IDataDownloader.cs" />
-    <Compile Include="RawFileProcessor.cs" />
-    <Compile Include="CsvDataProcessor.cs" />
-    <Compile Include="YahooDownloader\Historical.cs" />
-    <Compile Include="YahooDownloader\YahooDownloaderProgram.cs" />
-    <Compile Include="YahooDownloader\Token.cs" />
-    <Compile Include="YahooDownloader\YahooDataDownloader.cs" />
-    <Compile Include="ZipStreamProvider.cs" />
-  </ItemGroup>
-  <ItemGroup>
     <None Include="AlgoSeekFuturesConverter\AlgoSeek.US.Futures.PriceMultipliers.1.1.csv">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -310,7 +215,6 @@
     <None Include="IQFeed\IQFeed-symbol-map.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <Compile Include="KaikoDataConverter\KaikoCryptoReader.cs" />
     <None Include="packages.config" />
     <Content Include="Visualizer\QuantConnect.Visualizer.py">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -364,7 +268,6 @@
     </None>
   </ItemGroup>
   <ItemGroup />
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\packages\QuantConnect.pythonnet.1.0.5.20\build\QuantConnect.pythonnet.targets" Condition="Exists('..\packages\QuantConnect.pythonnet.1.0.5.20\build\QuantConnect.pythonnet.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
