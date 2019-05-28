@@ -19,7 +19,7 @@ using Newtonsoft.Json;
 
 namespace QuantConnect.Data.Custom.Sec
 {
-    public class SecReportSubmission 
+    public class SecReportSubmission
     {
         /// <summary>
         /// Number used to access document filings on the SEC website

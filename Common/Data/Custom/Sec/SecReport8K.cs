@@ -69,19 +69,19 @@ namespace QuantConnect.Data.Custom.Sec
         }
 
         /// <summary>
-        /// Parses the data into <see cref="BaseData"/>
+        /// Parses the data into instance of <see cref="BaseData"/>
         /// </summary>
         /// <param name="config">User subscription config</param>
         /// <param name="line">Line of source file to parse</param>
         /// <param name="date">Date data was requested for</param>
-        /// <param name="isLiveMode">Is livetrading mode</param>
+        /// <param name="isLiveMode">Is live trading mode</param>
         /// <returns></returns>
         public override BaseData Reader(SubscriptionDataConfig config, string line, DateTime date, bool isLiveMode)
         {
-            var reportCollection = new SecReportCollection();
-            var reports = JsonConvert.DeserializeObject<List<SecReportSubmission>>(line);
+            var reportSubmissions = JsonConvert.DeserializeObject<List<SecReportSubmission>>(line);
+            var reports = reportSubmissions.Select(report => new SecReport8K(report));
 
-            return new BaseDataCollection(date, config.Symbol, )
+            return new BaseDataCollection(date, config.Symbol, reports);
         }
     }
 }
