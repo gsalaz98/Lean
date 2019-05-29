@@ -232,6 +232,7 @@
     <Compile Include="Data\Custom\Sec\SecReport8K.cs" />
     <Compile Include="Data\Custom\Sec\SecReport10Q.cs" />
     <Compile Include="Data\Custom\Sec\SecReport10K.cs" />
+    <Compile Include="Data\Custom\Sec\SecReportMetadata.cs" />
     <Compile Include="Data\Custom\Sec\SecReportSubmission.cs" />
     <Compile Include="Data\Custom\USEnergyInformation.cs" />
     <Compile Include="Data\Fundamental\AssetClassificationHelper.cs" />
