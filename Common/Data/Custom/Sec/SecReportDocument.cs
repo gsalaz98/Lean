@@ -23,7 +23,7 @@ namespace QuantConnect.Data.Custom.Sec
         /// Report document type, e.g. 10-Q, 8-K, S-1
         /// </summary>
         [JsonProperty("TYPE")]
-        public string FType;
+        public string FormType;
 
         /// <summary>
         /// Nth attachment to the form filed

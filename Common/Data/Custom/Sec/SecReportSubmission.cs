@@ -31,7 +31,7 @@ namespace QuantConnect.Data.Custom.Sec
         /// SEC form type
         /// </summary>
         [JsonProperty("TYPE")]
-        public string FType;
+        public string FormType;
 
         /// <summary>
         /// Number of documents made public by the SEC
@@ -40,13 +40,13 @@ namespace QuantConnect.Data.Custom.Sec
         public string PublicDocumentCount;
 
         /// <summary>
-        /// ???
+        /// End  date of reporting period of filing. Optional.
         /// </summary>
         [JsonProperty("PERIOD"), JsonConverter(typeof(SecReportDateTimeConverter))]
         public DateTime Period;
 
         /// <summary>
-        /// ???
+        /// Identifies 1 or more items declared in 8-K filings. Optional & Repeatable.
         /// </summary>
         [JsonProperty("ITEMS"), JsonConverter(typeof(PossibleListConverter<string>))]
         public List<string> Items = new List<string>();
@@ -58,10 +58,17 @@ namespace QuantConnect.Data.Custom.Sec
         public DateTime FilingDate;
 
         /// <summary>
-        /// ???
+        /// Date when the last Post Acceptance occurred. Optional.
         /// </summary>
         [JsonProperty("DATE-OF-FILING-CHANGE"), JsonConverter(typeof(SecReportDateTimeConverter))]
         public DateTime FilingDateChange;
+
+        /// <summary>
+        /// Exact time the report was filed with the SEC and made available to the public (plus 10 minute delay).
+        /// This field is NOT included with the raw SEC report, and should be added during post processing of the data
+        /// </summary>
+        [JsonProperty("MADE-AVAILABLE-AT")]
+        public DateTime MadeAvailableAt;
         
         /// <summary>
         /// Contains information regarding who the filer of the report is

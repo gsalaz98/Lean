@@ -13,6 +13,7 @@
  * limitations under the License.
 */
 
+using System.Collections.Generic;
 using System.Linq;
 using QuantConnect.Data;
 using QuantConnect.Data.Custom.Sec;
@@ -37,23 +38,21 @@ namespace QuantConnect.Algorithm.CSharp
         /// </summary>
         public override void Initialize()
         {
-            SetStartDate(2019, 5, 1);
-            SetEndDate(2019, 5, 10);
+            SetStartDate(2019, 1, 1);
+            SetEndDate(2019, 1, 31);
             SetCash(100000);
 
             _symbol = AddData<SecReport10Q>(Ticker).Symbol;
+            AddData<SecReport8K>(Ticker);
         }
 
         public override void OnData(Slice slice)
         {
-            var data = slice.Get<SecReport10Q>();
-
-            // We only want SEC data
-            if (!data.ContainsKey(_symbol)) return;
-
+            var data = slice.Get<ISecReport>();
+            
             foreach (var submission in data.Values)
             {
-                Log($"Form Type {submission.Report.FType}");
+                Log($"Form Type {submission.Report.FormType}");
                 Log($"Filing Date: {submission.Report.FilingDate:yyyy-MM-dd}");
 
                 foreach (var filer in submission.Report.Filers)

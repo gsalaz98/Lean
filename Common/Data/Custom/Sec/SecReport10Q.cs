@@ -42,6 +42,7 @@ namespace QuantConnect.Data.Custom.Sec
         public SecReport10Q(SecReportSubmission report)
         {
             Report = report;
+            Time = report.FilingDate;
         }
 
         /// <summary>
@@ -83,7 +84,10 @@ namespace QuantConnect.Data.Custom.Sec
         public override BaseData Reader(SubscriptionDataConfig config, string line, DateTime date, bool isLiveMode)
         {
             var reportSubmissions = JsonConvert.DeserializeObject<List<SecReportSubmission>>(line);
-            var reports = reportSubmissions.Select(report => new SecReport10Q(report));
+            var reports = reportSubmissions.Select(report => new SecReport10Q(report)
+            {
+                Symbol = config.Symbol
+            });
 
             return new BaseDataCollection(date, config.Symbol, reports);
         }

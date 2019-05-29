@@ -25,7 +25,7 @@ namespace QuantConnect.Data.Custom.Sec
     {
         public SecReportDateTimeConverter()
         {
-            base.DateTimeFormat = "yyyyMMdd";
+            base.DateTimeFormat = "yyyyMMdd HH:mm:ss";
         }
     }
 

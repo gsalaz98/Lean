@@ -29,25 +29,16 @@ namespace QuantConnect.Data.Custom.Sec
         /// <summary>
         /// Factory method creates SEC report by deserializing XML formatted SEC data to <see cref="SecReportCollection"/> 
         /// </summary>
-        /// <param name="rawDataXmlFilePath">Path to XML file containing formatted SEC data</param>
-        public ISecReport CreateSecReport(string rawDataXmlFilePath)
+        /// <param name="xmlText">XML text containing SEC data</param>
+        public ISecReport CreateSecReport(string xmlText)
         {
             var secReportXml = new XmlDocument();
-
-            try
-            {
-                secReportXml.Load(rawDataXmlFilePath);
-            }
-            catch (Exception)
-            {
-                Log.Error($"Failed to load XML file: {rawDataXmlFilePath}");
-                throw;
-            }
+            secReportXml.LoadXml(xmlText);
 
             var json = JsonConvert.SerializeXmlNode(secReportXml, Formatting.None, true);
             var secReportDocument = JsonConvert.DeserializeObject<SecReportSubmission>(json);
 
-            var formType = secReportDocument.FType;
+            var formType = secReportDocument.FormType;
 
             switch (formType)
             {

@@ -17,7 +17,7 @@ using System.Collections.Generic;
 
 namespace QuantConnect.Data.Custom.Sec
 {
-    public interface ISecReport
+    public interface ISecReport : IBaseData
     {
         /// <summary>
         /// Contents of the actual SEC report

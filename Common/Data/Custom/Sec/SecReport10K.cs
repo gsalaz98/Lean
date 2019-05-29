@@ -14,8 +14,11 @@
 */
 
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Newtonsoft.Json;
+using QuantConnect.Data.UniverseSelection;
 
 namespace QuantConnect.Data.Custom.Sec
 {
@@ -32,9 +35,14 @@ namespace QuantConnect.Data.Custom.Sec
             private set { _report = value; }
         }
 
+        public SecReport10K()
+        {
+        }
+
         public SecReport10K(SecReportSubmission report)
         {
             Report = report;
+            Time = report.FilingDate;
         }
 
         /// <summary>
@@ -75,6 +83,13 @@ namespace QuantConnect.Data.Custom.Sec
         /// <returns></returns>
         public override BaseData Reader(SubscriptionDataConfig config, string line, DateTime date, bool isLiveMode)
         {
+            var reportSubmissions = JsonConvert.DeserializeObject<List<SecReportSubmission>>(line);
+            var reports = reportSubmissions.Select(report => new SecReport10K(report)
+            {
+                Symbol = config.Symbol
+            });
+
+            return new BaseDataCollection(date, config.Symbol, reports);
         }
     }
 }

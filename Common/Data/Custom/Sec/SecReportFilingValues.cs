@@ -27,7 +27,7 @@ namespace QuantConnect.Data.Custom.Sec
         public string FormType;
 
         /// <summary>
-        /// ???
+        /// Identification of the act(s) under which certain IM filings are made. The form type may be filed under more than one act. Required in each filing values tag nest.
         /// </summary>
         [JsonProperty("ACT")]
         public string Act;

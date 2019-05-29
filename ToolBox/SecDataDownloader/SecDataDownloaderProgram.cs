@@ -13,25 +13,38 @@
  * limitations under the License.
 */
 
-using QuantConnect.Data.Custom.Sec;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using QuantConnect.Data.Custom.Sec;
+using QuantConnect.Logging;
 
 namespace QuantConnect.ToolBox.SecDataDownloader
 {
     public static class SecDataDownloaderProgram
     {
-        public static void SecDataDownloader(DateTime startDate, DateTime endDate)
+        /// <summary>
+        /// Downloads and converts the data
+        /// </summary>
+        /// <param name="rawDestination">Destination where raw data will be written to</param>
+        /// <param name="destination">Destination where processed data will be written to</param>
+        /// <param name="start">Start date</param>
+        /// <param name="end">End date</param>
+        /// <param name="knownEquityFolder">Folder to search for known equities, i.e. equities we will download data for</param>
+        /// <param name="postProcess">Determines whether we should try to get publication date and alter <see cref="SecReportSubmission"/> object(s) to have `MadeAvailableAt`</param>
+        public static void SecDataDownloader(string rawDestination, string destination, DateTime start, DateTime end, string knownEquityFolder, string postProcess)
         {
-            // Create dummy symbol
-            var symbol = Symbol.Create("FOO", SecurityType.Equity, Market.USA);
-            var downloader = new SecDataDownloader();
-
-            downloader.Get(symbol, Resolution.Tick, startDate, endDate);
+            var download = new RawSecDownload();
+            var converter = new SecDataConverter(knownEquityFolder);
+            
+            Log.Trace("SecDataDownloaderProgram.SecDataDownloader(): Begin downloading raw files from SEC website...");
+            download.Download(rawDestination, start, end);
+            
+            Log.Trace("SecDataDownloaderProgram.SecDataDownloader(): Begin parsing raw files from disk...");
+            converter.Process(rawDestination, destination, postProcess == "true");
         }
     }
 }

@@ -16,6 +16,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.IO;
 using QuantConnect.Configuration;
 using QuantConnect.ToolBox.AlgoSeekFuturesConverter;
 using QuantConnect.ToolBox.AlgoSeekOptionsConverter;
@@ -116,7 +117,21 @@ namespace QuantConnect.ToolBox
                         break;
                     case "secdl":
                     case "secdownloader":
-                        SecDataDownloaderProgram.SecDataDownloader(fromDate, toDate);
+                        var equityFolder = Path.Combine(Globals.DataFolder, "equity", Market.USA);
+                        var secFolder = Path.Combine(equityFolder, "alternative", "sec");
+
+                        SecDataDownloaderProgram.SecDataDownloader(
+                            GetParameterOrDefault(optionsObject, "source-dir", Path.Combine(secFolder, "raw_data")),
+                            GetParameterOrDefault(optionsObject, "destination-dir", secFolder),
+                            fromDate,
+                            toDate,
+                            GetParameterOrDefault(
+                                optionsObject,
+                                "knownEquityFolder",
+                                Path.Combine(equityFolder, "daily")
+                            ),
+                            GetParameterOrDefault(optionsObject, "postProcess", "false")
+                        );
                         break;
                     default:
                         PrintMessageAndExit(1, "ERROR: Unrecognized --app value");
