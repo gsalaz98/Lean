@@ -24,16 +24,10 @@ namespace QuantConnect.Data.Custom.Sec
 {
     public class SecReport10K : BaseData, ISecReport
     {
-        private SecReportSubmission _report;
-
         /// <summary>
         /// Contents of the actual SEC report
         /// </summary>
-        public SecReportSubmission Report
-        {
-            get { return _report; }
-            private set { _report = value; }
-        }
+        public SecReportSubmission Report { get; }
 
         public SecReport10K()
         {
@@ -69,7 +63,7 @@ namespace QuantConnect.Data.Custom.Sec
                     $"{date:yyyyMMdd}_10K.zip#10K.json"
                 ),
                 SubscriptionTransportMedium.LocalFile,
-                FileFormat.Csv
+                FileFormat.Collection
             );
         }
 
@@ -90,6 +84,18 @@ namespace QuantConnect.Data.Custom.Sec
             });
 
             return new BaseDataCollection(date, config.Symbol, reports);
+        }
+
+        /// <summary>
+        /// Clones the current object into a new object
+        /// </summary>
+        /// <returns>BaseData clone of the current object</returns>
+        public override BaseData Clone()
+        {
+            return new SecReport10K(Report)
+            {
+                Symbol = Symbol
+            };
         }
     }
 }

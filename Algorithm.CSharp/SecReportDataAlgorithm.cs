@@ -49,7 +49,7 @@ namespace QuantConnect.Algorithm.CSharp
         public override void OnData(Slice slice)
         {
             var data = slice.Get<ISecReport>();
-            
+
             foreach (var submission in data.Values)
             {
                 Log($"Form Type {submission.Report.FormType}");
@@ -64,7 +64,7 @@ namespace QuantConnect.Algorithm.CSharp
                     foreach (var formerCompany in filer.FormerCompanies)
                     {
                         Log($"Former company name of {filer.CompanyData.ConformedName}: {formerCompany.FormerConformedName}");
-                        Log($"Date of company name change: ${formerCompany.Changed:yyyy-MM-dd}");
+                        Log($"Date of company name change: {formerCompany.Changed:yyyy-MM-dd}");
                     }
                 }
 
@@ -77,7 +77,7 @@ namespace QuantConnect.Algorithm.CSharp
                     Log($"Document description: {document.Description}");
 
                     // Print sample of contents contained within the document
-                    Log(document.Text.Substring(0, 10000));
+                    Log(document.Text.Substring(0, 100));
                     Log("=================");
                 }
             }

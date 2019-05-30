@@ -32,25 +32,24 @@ class TiingoDailyDataAlgorithm(QCAlgorithm):
 
     def Initialize(self):
         # Initialise the data and resolution required, as well as the cash and start-end dates for your algorithm. All algorithms must initialized.
-        self.SetStartDate(2019, 5, 1)
-        self.SetEndDate(2019, 5, 10)
+        self.SetStartDate(2019, 1, 1)
+        self.SetEndDate(2019, 1, 31)
         self.SetCash(100000)
 
         self.ticker = "AAPL"
-        self.symbol = self.AddData(SecReport10K, self.ticker, Resolution.Daily).Symbol
+        self.symbol = self.AddData(SecReport10Q, self.ticker).Symbol
+        self.AddData(SecReport8K, self.ticker)
 
     def OnData(self, slice):
         # OnData event is the primary entry point for your algorithm. Each new data point will be pumped in here.
-        if not slice.ContainsKey(self.ticker): return
-
         data = slice[self.ticker]
-        report = data[self.symbol].Report
+        report = data.Report
 
-        self.Log(f"Form Type {report.FType}")
+        self.Log(f"Form Type {report.FormType}")
         self.Log(f"Filing Date: {str(report.FilingDate)}")
 
         for filer in report.Filers:
-            self.Log(f"Filing company name: {filer.CommpanyData.ConformedName}")
+            self.Log(f"Filing company name: {filer.CompanyData.ConformedName}")
             self.Log(f"Filing company CIK: {filer.CompanyData.Cik}")
             self.Log(f"Filing company EIN: {filer.CompanyData.IrsNumber}")
 
@@ -67,7 +66,7 @@ class TiingoDailyDataAlgorithm(QCAlgorithm):
             self.Log(f"Document description: {document.Description}")
 
             # Print sample of contents contained within the document
-            self.Log(document.Text[:10000])
+            self.Log(document.Text[:100])
             self.Log("=================")
 
 
