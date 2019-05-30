@@ -31,7 +31,7 @@ namespace QuantConnect.Algorithm.CSharp
     {
         private Symbol _symbol;
 
-        public string Ticker = "AAPL";
+        public const string Ticker = "AAPL";
 
         /// <summary>
         /// Initialise the data and resolution required, as well as the cash and start-end dates for your algorithm. All algorithms must initialized.
