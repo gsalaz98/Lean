@@ -16,7 +16,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using QuantConnect.Data;
-using QuantConnect.Data.Custom.Sec;
+using QuantConnect.Data.Custom.SEC;
 
 namespace QuantConnect.Algorithm.CSharp
 {

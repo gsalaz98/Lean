@@ -15,7 +15,7 @@
 
 using Newtonsoft.Json;
 
-namespace QuantConnect.Data.Custom.Sec
+namespace QuantConnect.Data.Custom.SEC
 {
     public class SECReportCompanyData
     {

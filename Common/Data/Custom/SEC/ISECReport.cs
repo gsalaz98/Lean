@@ -13,7 +13,7 @@
  * limitations under the License.
 */
 
-namespace QuantConnect.Data.Custom.Sec
+namespace QuantConnect.Data.Custom.SEC
 {
     public interface ISECReport : IBaseData
     {

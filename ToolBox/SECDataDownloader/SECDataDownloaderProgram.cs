@@ -14,7 +14,7 @@
 */
 
 using System;
-using QuantConnect.Data.Custom.Sec;
+using QuantConnect.Data.Custom.SEC;
 using QuantConnect.Logging;
 
 namespace QuantConnect.ToolBox.SecDataDownloader
@@ -29,7 +29,7 @@ namespace QuantConnect.ToolBox.SecDataDownloader
         /// <param name="start">Start date</param>
         /// <param name="end">End date</param>
         /// <param name="knownEquityFolder">Folder to search for known equities, i.e. equities we will download data for</param>
-        public static void SecDataDownloader(string rawDestination, string destination, DateTime start, DateTime end, string knownEquityFolder)
+        public static void SECDataDownloader(string rawDestination, string destination, DateTime start, DateTime end, string knownEquityFolder)
         {
             var download = new SECDataDownloader();
             Log.Trace("SecDataDownloaderProgram.SecDataDownloader(): Begin downloading raw files from SEC website...");

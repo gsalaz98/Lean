@@ -18,7 +18,7 @@ using System.Collections.Generic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
-namespace QuantConnect.Data.Custom.Sec
+namespace QuantConnect.Data.Custom.SEC
 {
     /// <summary>
     /// Specifies format for parsing <see cref="DateTime"/> values from SEC data

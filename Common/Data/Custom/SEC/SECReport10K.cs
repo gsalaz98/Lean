@@ -20,7 +20,7 @@ using System.Linq;
 using Newtonsoft.Json;
 using QuantConnect.Data.UniverseSelection;
 
-namespace QuantConnect.Data.Custom.Sec
+namespace QuantConnect.Data.Custom.SEC
 {
     public class SECReport10K : BaseData, ISECReport
     {

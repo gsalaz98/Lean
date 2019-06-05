@@ -27,7 +27,7 @@ using System.Xml;
 using ICSharpCode.SharpZipLib.GZip;
 using ICSharpCode.SharpZipLib.Tar;
 using Newtonsoft.Json;
-using QuantConnect.Data.Custom.Sec;
+using QuantConnect.Data.Custom.SEC;
 using QuantConnect.Logging;
 using QuantConnect.Util;
 using Formatting = Newtonsoft.Json.Formatting;

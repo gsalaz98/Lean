@@ -20,7 +20,7 @@ using NUnit.Framework;
 using QuantConnect.Algorithm.CSharp;
 using QuantConnect.Data;
 using QuantConnect.Data.Custom;
-using QuantConnect.Data.Custom.Sec;
+using QuantConnect.Data.Custom.SEC;
 using QuantConnect.Lean.Engine.DataFeeds;
 
 namespace QuantConnect.Tests.Common.Data.Custom

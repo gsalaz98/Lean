@@ -16,7 +16,7 @@
 using Newtonsoft.Json;
 using System.Collections.Generic;
 
-namespace QuantConnect.Data.Custom.Sec
+namespace QuantConnect.Data.Custom.SEC
 {
     public class SECReportFiler
     {

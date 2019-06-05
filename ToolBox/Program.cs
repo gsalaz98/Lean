@@ -120,7 +120,7 @@ namespace QuantConnect.ToolBox
                         var equityFolder = Path.Combine(Globals.DataFolder, "equity", Market.USA);
                         var secFolder = Path.Combine(equityFolder, "alternative", "sec");
 
-                        SECDataDownloaderProgram.SecDataDownloader(
+                        SECDataDownloaderProgram.SECDataDownloader(
                             GetParameterOrDefault(optionsObject, "source-dir", Path.Combine(secFolder, "raw_data")),
                             GetParameterOrDefault(optionsObject, "destination-dir", secFolder),
                             fromDate,

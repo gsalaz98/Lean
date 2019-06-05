@@ -19,7 +19,7 @@ using System.Data;
 using System.Xml;
 using Formatting = Newtonsoft.Json.Formatting;
 
-namespace QuantConnect.Data.Custom.Sec
+namespace QuantConnect.Data.Custom.SEC
 {
     public class SECReportFactory
     {
