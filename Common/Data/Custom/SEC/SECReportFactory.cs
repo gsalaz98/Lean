@@ -24,10 +24,10 @@ namespace QuantConnect.Data.Custom.SEC
     public class SECReportFactory
     {
         /// <summary>
-        /// Factory method creates SEC report by deserializing XML formatted SEC data to <see cref="SecReportCollection"/> 
+        /// Factory method creates SEC report by deserializing XML formatted SEC data to <see cref="SECReportSubmission"/> 
         /// </summary>
         /// <param name="xmlText">XML text containing SEC data</param>
-        public ISECReport CreateSecReport(string xmlText)
+        public ISECReport CreateSECReport(string xmlText)
         {
             var secReportXml = new XmlDocument();
             secReportXml.LoadXml(xmlText);

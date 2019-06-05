@@ -32,7 +32,7 @@ using QuantConnect.Logging;
 using QuantConnect.Util;
 using Formatting = Newtonsoft.Json.Formatting;
 
-namespace QuantConnect.ToolBox.SecDataDownloader
+namespace QuantConnect.ToolBox.SECDataDownloader
 {
     public class SECDataConverter
     {
@@ -135,7 +135,7 @@ namespace QuantConnect.ToolBox.SecDataDownloader
                             Directory.CreateDirectory(extractDataPath);
                             archive.ExtractContents(extractDataPath);
 
-                            Log.Trace($"SecDataConverter.Process(): Extracted SEC data to path {extractDataPath}");
+                            Log.Trace($"SECDataConverter.Process(): Extracted SEC data to path {extractDataPath}");
                         }
                     }
 
@@ -147,7 +147,7 @@ namespace QuantConnect.ToolBox.SecDataDownloader
                             // Avoid processing files greater than MaxFileSize megabytes
                             if (MaxFileSize < new FileInfo(rawReportFilePath).Length)
                             {
-                                Log.Trace($"SecDataConverter.Process(): File {rawReportFilePath} is too large to process. Continuing...");
+                                Log.Trace($"SECDataConverter.Process(): File {rawReportFilePath} is too large to process. Continuing...");
                                 return;
                             }
 
@@ -207,16 +207,16 @@ namespace QuantConnect.ToolBox.SecDataDownloader
                             ISECReport report;
                             try
                             {
-                                report = factory.CreateSecReport(xmlText.ToString());
+                                report = factory.CreateSECReport(xmlText.ToString());
                             }
                             catch (DataException e)
                             {
-                                Log.Trace($"SecDataConverter.Process(): {e.Message}");
+                                Log.Trace($"SECDataConverter.Process(): {e.Message}");
                                 return;
                             }
                             catch (XmlException e)
                             {
-                                Log.Error(e, $"SecDataConverter.Process(): Failed to parse XML from file path: {rawReportFilePath}");
+                                Log.Error(e, $"SECDataConverter.Process(): Failed to parse XML from file path: {rawReportFilePath}");
                                 return;
                             }
                             

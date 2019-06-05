@@ -25,16 +25,16 @@ namespace QuantConnect.Data.Custom.SEC
         /// First and only root entry of SEC index.json
         /// </summary>
         [JsonProperty("directory")]
-        public SecReportIndexDirectory Directory;
+        public SECReportIndexDirectory Directory;
     }
 
-    public class SecReportIndexDirectory
+    public class SECReportIndexDirectory
     {
         /// <summary>
         /// Contains additional metadata regarding files present on the server
         /// </summary>
         [JsonProperty("item")]
-        public List<SecReportIndexItem> Items;
+        public List<SECReportIndexItem> Items;
         
         /// <summary>
         /// Path directory
@@ -49,7 +49,7 @@ namespace QuantConnect.Data.Custom.SEC
         public string ParentDirectory;
     }
 
-    public class SecReportIndexItem
+    public class SECReportIndexItem
     {
         /// <summary>
         /// Date the SEC submission was published

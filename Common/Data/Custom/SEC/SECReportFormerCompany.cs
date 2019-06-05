@@ -29,7 +29,7 @@ namespace QuantConnect.Data.Custom.SEC
         /// <summary>
         /// Date the company name was changed to a new name
         /// </summary>
-        [JsonProperty("DATE-CHANGED"), JsonConverter(typeof(SecReportDateTimeConverter))]
+        [JsonProperty("DATE-CHANGED"), JsonConverter(typeof(SECReportDateTimeConverter))]
         public DateTime Changed;
     }
 }

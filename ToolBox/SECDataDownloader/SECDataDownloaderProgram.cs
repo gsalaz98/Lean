@@ -17,7 +17,7 @@ using System;
 using QuantConnect.Data.Custom.SEC;
 using QuantConnect.Logging;
 
-namespace QuantConnect.ToolBox.SecDataDownloader
+namespace QuantConnect.ToolBox.SECDataDownloader
 {
     public static class SECDataDownloaderProgram
     {

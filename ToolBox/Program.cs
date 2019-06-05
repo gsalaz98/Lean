@@ -38,7 +38,7 @@ using QuantConnect.ToolBox.OandaDownloader;
 using QuantConnect.ToolBox.QuandlBitfinexDownloader;
 using QuantConnect.ToolBox.QuantQuoteConverter;
 using QuantConnect.ToolBox.RandomDataGenerator;
-using QuantConnect.ToolBox.SecDataDownloader;
+using QuantConnect.ToolBox.SECDataDownloader;
 using QuantConnect.ToolBox.YahooDownloader;
 using QuantConnect.Util;
 

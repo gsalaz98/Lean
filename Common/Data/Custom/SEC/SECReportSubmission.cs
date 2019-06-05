@@ -42,7 +42,7 @@ namespace QuantConnect.Data.Custom.SEC
         /// <summary>
         /// End  date of reporting period of filing. Optional.
         /// </summary>
-        [JsonProperty("PERIOD"), JsonConverter(typeof(SecReportDateTimeConverter))]
+        [JsonProperty("PERIOD"), JsonConverter(typeof(SECReportDateTimeConverter))]
         public DateTime Period;
 
         /// <summary>
@@ -54,13 +54,13 @@ namespace QuantConnect.Data.Custom.SEC
         /// <summary>
         /// Date report was filed with the SEC
         /// </summary>
-        [JsonProperty("FILING-DATE"), JsonConverter(typeof(SecReportDateTimeConverter))]
+        [JsonProperty("FILING-DATE"), JsonConverter(typeof(SECReportDateTimeConverter))]
         public DateTime FilingDate;
 
         /// <summary>
         /// Date when the last Post Acceptance occurred. Optional.
         /// </summary>
-        [JsonProperty("DATE-OF-FILING-CHANGE"), JsonConverter(typeof(SecReportDateTimeConverter))]
+        [JsonProperty("DATE-OF-FILING-CHANGE"), JsonConverter(typeof(SECReportDateTimeConverter))]
         public DateTime FilingDateChange;
 
         /// <summary>

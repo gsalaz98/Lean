@@ -23,9 +23,9 @@ namespace QuantConnect.Data.Custom.SEC
     /// <summary>
     /// Specifies format for parsing <see cref="DateTime"/> values from SEC data
     /// </summary>
-    public class SecReportDateTimeConverter : IsoDateTimeConverter
+    public class SECReportDateTimeConverter : IsoDateTimeConverter
     {
-        public SecReportDateTimeConverter()
+        public SECReportDateTimeConverter()
         {
             base.DateTimeFormat = "yyyyMMdd HH:mm:ss";
         }

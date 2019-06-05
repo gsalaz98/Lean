@@ -23,7 +23,7 @@ using System.Threading.Tasks;
 using QuantConnect.Logging;
 using QuantConnect.Util;
 
-namespace QuantConnect.ToolBox.SecDataDownloader
+namespace QuantConnect.ToolBox.SECDataDownloader
 {
     public class SECDataDownloader
     {
@@ -82,7 +82,7 @@ namespace QuantConnect.ToolBox.SecDataDownloader
                         {
                             client.DownloadFile($"{BaseUrl}/Feed/{currentDate.Year}/{quarter}/{currentDate:yyyyMMdd}.nc.tar.gz", tmpFile);
                             File.Move(tmpFile, rawFile);
-                            Log.Trace($"RawSecDownload.Download(): Successfully downloaded {currentDate:yyyyMMdd}.nc.tar.gz");
+                            Log.Trace($"SECDataDownloader.Download(): Successfully downloaded {currentDate:yyyyMMdd}.nc.tar.gz");
                             break;
                         }
                     }
@@ -93,7 +93,7 @@ namespace QuantConnect.ToolBox.SecDataDownloader
                         // SEC website uses s3, which returns a 403 if the given file does not exist
                         if (response?.StatusCode != null && response.StatusCode == HttpStatusCode.Forbidden)
                         {
-                            Log.Error($"RawSecDownload.Download(): Report files not found on date {currentDate:yyyy-MM-dd}");
+                            Log.Error($"SECDataDownloader.Download(): Report files not found on date {currentDate:yyyy-MM-dd}");
                             break;
                         }
                     }
@@ -117,7 +117,7 @@ namespace QuantConnect.ToolBox.SecDataDownloader
             {
                 if (!File.Exists(cikTickerListPath))
                 {
-                    Log.Trace("RawSecDownload.Download(): Downloading ticker-CIK mappings list");
+                    Log.Trace("SECDataDownloader.Download(): Downloading ticker-CIK mappings list");
                     client.DownloadFile("https://www.sec.gov/include/ticker.txt", cikTickerListTempPath);
                     File.Move(cikTickerListTempPath, cikTickerListPath);
                     File.Delete(cikTickerListTempPath);
@@ -125,7 +125,7 @@ namespace QuantConnect.ToolBox.SecDataDownloader
 
                 if (!File.Exists(cikLookupPath))
                 {
-                    Log.Trace("RawSecDownload.Download(): Downloading CIK lookup data");
+                    Log.Trace("SECDataDownloader.Download(): Downloading CIK lookup data");
                     client.DownloadFile($"{BaseUrl}/cik-lookup-data.txt", cikLookupTempPath);
                     File.Move(cikLookupTempPath, cikLookupPath);
                     File.Delete(cikLookupTempPath);
@@ -176,7 +176,7 @@ namespace QuantConnect.ToolBox.SecDataDownloader
             try
             {
                 File.Move($"{cikPath}.tmp", cikPath);
-                Log.Trace($"RawSecDownload.Download(): Successfully downloaded {cikPath}");
+                Log.Trace($"SECDataDownloader.Download(): Successfully downloaded {cikPath}");
             }
             catch (Exception e)
             {
