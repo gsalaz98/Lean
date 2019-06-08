@@ -64,8 +64,8 @@ namespace QuantConnect.Jupyter
                 SetPandasConverter();
 
                 // Initialize History Provider
-                var composer = new Composer();
-                var algorithmHandlers = LeanEngineAlgorithmHandlers.FromConfiguration(composer);
+                //var composer = new Composer();
+                //var algorithmHandlers = LeanEngineAlgorithmHandlers.FromConfiguration(composer);
                 _dataCacheProvider = new ZipDataCacheProvider(algorithmHandlers.DataProvider);
 
                 var symbolPropertiesDataBase = SymbolPropertiesDatabase.FromDataFolder();

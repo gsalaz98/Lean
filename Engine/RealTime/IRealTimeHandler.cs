@@ -15,7 +15,6 @@
 */
 
 using System;
-using System.ComponentModel.Composition;
 using QuantConnect.Interfaces;
 using QuantConnect.Lean.Engine.Results;
 using QuantConnect.Packets;
@@ -26,7 +25,6 @@ namespace QuantConnect.Lean.Engine.RealTime
     /// <summary>
     /// Real time event handler, trigger functions at regular or pretimed intervals
     /// </summary>
-    [InheritedExport(typeof(IRealTimeHandler))]
     public interface IRealTimeHandler : IEventSchedule
     {
         /// <summary>
