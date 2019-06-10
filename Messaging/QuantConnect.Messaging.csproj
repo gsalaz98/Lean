@@ -85,6 +85,10 @@
       <SubType>Designer</SubType>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="NetMQ" Version="4.0.0.1" />
+    <PackageReference Include="RestSharp" Version="105.2.3" />
+  </ItemGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
