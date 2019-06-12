@@ -15,6 +15,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using QuantConnect.Configuration;
 using QuantConnect.ToolBox.AlgoSeekFuturesConverter;
@@ -114,6 +115,17 @@ namespace QuantConnect.ToolBox
                     case "bitfinexdownloader":
                         BitfinexDownloaderProgram.BitfinexDownloader(tickers, resolution, fromDate, toDate);
                         break;
+
+                    case "psdl":
+                    case "psychsignaldownloader":
+                        PsychSignalDataConverterProgram.PsychSignalDataDownloader(
+                            fromDate, 
+                            toDate,
+                            GetParameterOrDefault(optionsObject, "destination-dir", Path.Combine(Globals.DataFolder, "alternative", "psychsignal", "raw-psychsignal")),
+                            GetParameterOrExit(optionsObject, "api-key"),
+                            GetParameterOrDefault(optionsObject, "data-source", "twitter_enhanced_withretweets,stocktwits"));
+                        break;
+
                     default:
                         PrintMessageAndExit(1, "ERROR: Unrecognized --app value");
                         break;
@@ -187,10 +199,9 @@ namespace QuantConnect.ToolBox
                     case "psdc":
                     case "psychsignaldataconverter":
                         PsychSignalDataConverterProgram.PsychSignalDataConverter(
-                            GetParameterOrExit(optionsObject, "data-path"),
-                            GetParameterOrDefault(optionsObject, "security-type", "equity"),
-                            GetParameterOrDefault(optionsObject, "market", Market.USA)
-                        );
+                            GetParameterOrDefault(optionsObject, "source-dir", Path.Combine(Globals.DataFolder, "alternative", "psychsignal", "raw-psychsignal")),
+                            GetParameterOrDefault(optionsObject, "destination-dir", Path.Combine(Globals.DataFolder, "alternative", "psychsignal")),
+                            GetParameterOrDefault(optionsObject, "source-meta-dir", Path.Combine(Globals.DataFolder, "equity", "usa", "daily")));
                         break;
                     default:
                         PrintMessageAndExit(1, "ERROR: Unrecognized --app value");
