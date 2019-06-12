@@ -42,7 +42,7 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
         public static void PsychSignalDataConverter(string sourceDirectory, string destinationDirectory, string knownTickerFolder)
         {
             var converter = new PsychSignalDataConverter(sourceDirectory, destinationDirectory, knownTickerFolder);
-            converter.ConvertDirectory(sourceDirectory);
+            converter.ConvertDirectory();
         }
     }
 }

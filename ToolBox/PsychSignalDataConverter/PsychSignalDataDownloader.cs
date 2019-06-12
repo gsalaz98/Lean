@@ -24,18 +24,18 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
 {
     public class PsychSignalDataDownloader
     {
-        private string _apiKey;
-        private string _dataSource;
+        private readonly string _apiKey;
+        private readonly string _dataSource;
         
         /// <summary>
         /// Base URL for the psychsignal API
         /// </summary>
-        public string BaseUrl = "https://api.psychsignal.com/v2";
+        private readonly string _baseUrl = "https://api.psychsignal.com/v2";
 
         /// <summary>
         /// Destination we will write raw data to
         /// </summary>
-        public string RawDataDestination;
+        private readonly string _rawDataDestination;
         
         /// <summary>
         /// Maximum amount of retries per data hour 
@@ -50,7 +50,7 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
         /// <param name="dataSource">Data source (e.g. stocktwits,twitter_withretweets)</param>
         public PsychSignalDataDownloader(string rawDataDestination, string apiKey, string dataSource)
         {
-            RawDataDestination = rawDataDestination;
+            _rawDataDestination = rawDataDestination;
 
             _dataSource = dataSource;
             _apiKey = apiKey;
@@ -59,20 +59,24 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
         /// <summary>
         /// Download the data from the given starting date to the ending date 
         /// </summary>
-        /// <param name="startDate">Starting date. This time is in Eastern Time</param>
-        /// <param name="endDate">Ending date. This time is in Eastern Time</param>
+        /// <param name="startDate">Starting date. This time is should be in Eastern Time</param>
+        /// <param name="endDate">Ending date. This time is should be in Eastern Time</param>
         public void Download(DateTime startDate, DateTime endDate)
         {
             if (startDate < DateTime.UtcNow.ConvertFromUtc(TimeZones.NewYork).AddDays(-15))
             {
                 throw new ArgumentException("The starting date can only be at most 15 days from now");
             }
-
-            for (; startDate < endDate; startDate = startDate.AddHours(1))
+            
+            Directory.CreateDirectory(_rawDataDestination);
+            
+            // PsychSignal paginates by hour
+            for (; startDate < endDate.ConvertFromUtc(TimeZones.NewYork); startDate = startDate.AddHours(1))
             {
-                var rawDataPath = Path.Combine(RawDataDestination, $"{startDate:yyyyMMdd_HH}.csv");
+                var rawDataPath = Path.Combine(_rawDataDestination, $"{startDate:yyyyMMdd_HH}_{_dataSource}.csv");
                 var rawDataPathTemp = $"{rawDataPath}.tmp";
-
+                
+                // Don't download files we already have
                 if (File.Exists(rawDataPath))
                 {
                     continue;
@@ -88,24 +92,25 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
                     {
                         using (var client = new WebClient())
                         {
-                            client.DownloadFile(
-                                $"{BaseUrl}/replay?apikey={_apiKey}&update=1m&sources={_dataSource}&from={startDate:yyyyMMddHH}&format=csv",
-                                rawDataPathTemp
-                            );
+                            client.DownloadFile($"{_baseUrl}/replay?apikey={_apiKey}&update=1m&sources={_dataSource}&from={startDate:yyyyMMddHH}&format=csv", rawDataPathTemp);
                             File.Move(rawDataPathTemp, rawDataPath);
                             break;
                         }
                     }
                     catch (WebException e)
                     {
-                        if (retries + 1 == MaxRetries)
+                        var response = (HttpWebResponse) e.Response;
+
+                        if (retries == MaxRetries - 1)
                         {
                             Log.Error($"PsychSignalDataDownloader.Download(): We've reached the maximum number of retries for date {startDate:yyyy-MM-dd HH:00:00}");
                             continue;
                         }
-
-                        var response = (HttpWebResponse) e.Response;
-
+                        if (response == null)
+                        {
+                            Log.Error("PsychSignalDataDownloader.Download(): Response was null. Retrying...");
+                            continue;
+                        }
                         if (response.StatusCode == HttpStatusCode.BadRequest)
                         {
                             Log.Error("PsychSignalDataDownloader.Download(): Server received a bad request. Continuing...");
