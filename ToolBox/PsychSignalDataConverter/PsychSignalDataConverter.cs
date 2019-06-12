@@ -18,94 +18,118 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using QuantConnect.Logging;
+using QuantConnect.Util;
 
 namespace QuantConnect.ToolBox.PsychSignalDataConverter
 {
     public class PsychSignalDataConverter
     {
+        private readonly Dictionary<string, TickerData> _fileHandles = new Dictionary<string, TickerData>();
+        private readonly HashSet<string> _knownTickers;
+        private string _previousTicker;
+        
+        /// <summary>
+        /// Raw source directory
+        /// </summary>
+        public string RawSourceDirectory;
+
+        /// <summary>
+        /// Destination directory to write our formatted data
+        /// </summary>
+        public string DestinationDirectory;
+
+        public PsychSignalDataConverter(string sourceDirectory, string destinationDirectory, string knownTickerFolder)
+        {
+            RawSourceDirectory = sourceDirectory;
+            DestinationDirectory = destinationDirectory;
+
+            _knownTickers = Directory.GetFiles(knownTickerFolder, "*.zip").Select(Path.GetFileNameWithoutExtension).ToHashSet();
+
+            Directory.CreateDirectory(DestinationDirectory);
+        }
+            
+        /// <summary>
+        /// Converts a specific file to Lean alternative data format
+        /// </summary>
+        /// <param name="sourceFilePath"></param>
+        public void Convert(string sourceFilePath)
+        {
+            foreach (var line in File.ReadLines(sourceFilePath))
+            {
+                ProcessEquity(line);
+            }
+
+            // Make sure that we close the final writer so that we write the data and don't get an IOException
+            _fileHandles[_previousTicker].Writer.Close();
+        }
+
         /// <summary>
         /// Iterate over the data, processing each data point before finally zipping the directories
         /// </summary>
-        public void Convert(string sourceFilePath, SecurityType securityType, string market)
+        public void ConvertDirectory(string sourceDirectory)
         {
-            if (securityType != SecurityType.Equity)
+            foreach (var rawFile in Directory.GetFiles(RawSourceDirectory, "*.csv", SearchOption.AllDirectories))
             {
-                throw new ArgumentException("Only equity data is supported for the psychsignal converter. Exiting...");
+                Convert(rawFile);
+            }
+        }
+        
+        /// <summary>
+        /// Process an equity entry from the psychsignal data
+        /// </summary>
+        /// <param name="currentLine"></param>
+        public void ProcessEquity(string currentLine)
+        {
+            if (currentLine.StartsWith("SOURCE"))
+            {
+                return;
             }
 
-            var tickerFileHandlers = new Dictionary<string, TickerData>();
-            var tickerFolders = new List<string>();
+            var csv = currentLine.Split(',');
 
-            var dataFolder = Path.Combine(Globals.DataFolder, securityType.SecurityTypeToLower(), market);
-            var sentimentFolder = Path.Combine(dataFolder, "alternative", "psychsignal");
-            var knownTickerFolder = Path.Combine(dataFolder, "daily");
-
-            var knownTickers = (from zipFile in Directory.GetFiles(knownTickerFolder, "*.zip")
-                               select Path.GetFileNameWithoutExtension(zipFile)).ToList();
-
-            var previousTicker = string.Empty;
-
-            foreach (var currentLine in File.ReadLines(sourceFilePath))
+            var ticker = csv[1].ToLower();
+            if (!_knownTickers.Contains(ticker))
             {
-                if (currentLine.StartsWith("SOURCE"))
-                {
-                    continue;
-                }
+                return;
+            }
 
-                var csv = currentLine.Split(',');
+            DateTime timestamp;
+            if (!DateTime.TryParse(csv[2], out timestamp))
+            {
+                Log.Error($"Failed to parse timestamp: {csv[2]}");
+                return;
+            }
 
-                var ticker = csv[1].ToLower();
-                if (!knownTickers.Contains(ticker))
-                {
-                    continue;
-                }
+            var dataFilePathTemp = Path.Combine(DestinationDirectory, ticker, $"{timestamp:yyyyMMdd}.csv.tmp");
+            
+            // Avoids having to re-open the file every time we want to write to it
+            TickerData fileHandle;
+            if (!_fileHandles.TryGetValue(ticker, out fileHandle))
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(dataFilePathTemp));
 
-                DateTime timestamp;
-                if (!DateTime.TryParse(csv[2], out timestamp))
-                {
-                    Log.Error($"Failed to parse timestamp: {csv[2]}");
-                    continue;
-                }
-
-                var dataFilePath = Path.Combine(sentimentFolder, ticker, $"{timestamp:yyyyMMdd}.csv");
-
-                // Avoids having to re-open the file every time we want to write to it
-                TickerData handler;
-                if (!tickerFileHandlers.TryGetValue(ticker, out handler))
-                {
-                    if (!tickerFolders.Contains(ticker))
-                    {
-                        Directory.CreateDirectory(Path.Combine(sentimentFolder, ticker));
-                        tickerFolders.Add(ticker);
-                    }
-                    tickerFileHandlers[ticker] = new TickerData(dataFilePath);
-                    handler = tickerFileHandlers[ticker];
-                }
-                if (handler.DataPath != dataFilePath)
-                {
-                    tickerFileHandlers[ticker].UpdateWriter(dataFilePath);
-                }
-                // We need to flush the previous data if our ticker has changed in order to completely write all data to disk.
-                // Previously, the last day's data would not be written because the file was never closed. 
-                if (previousTicker != ticker && !string.IsNullOrEmpty(previousTicker))
-                {
-                    tickerFileHandlers[previousTicker].Writer.Close();
-                    tickerFileHandlers.Remove(previousTicker);
-                }
-
-                // SOURCE[0],SYMBOL[1],TIMESTAMP_UTC[2],BULLISH_INTENSITY[3],BEARISH_INTENSITY[4],BULL_MINUS_BEAR[5],BULL_SCORED_MESSAGES[6],BEAR_SCORED_MESSAGES[7],BULL_BEAR_MSG_RATIO[8],TOTAL_SCANNED_MESSAGES[9]
-                handler.Writer.WriteLine(ToCsv(timestamp, csv.Skip(3)));
-                previousTicker = ticker;
+                _fileHandles[ticker] = new TickerData(dataFilePathTemp, timestamp.Date);
+                fileHandle = _fileHandles[ticker];
             }
             
-            // Free final writer so that we don't get an IOException due to the final file being open
-            tickerFileHandlers[previousTicker].Writer.Close();
-
-            foreach (var tickerDataFolder in Directory.GetDirectories(sentimentFolder))
+            // If the day has changed on us, update the writer to the new path
+            if (timestamp != fileHandle.Time)
             {
-                Compression.ZipDirectory(tickerDataFolder, $"{tickerDataFolder}.zip", false);
-                Directory.Delete(tickerDataFolder, true);
+                fileHandle.CloseAndMove();
+                _fileHandles[ticker].UpdateWriter(dataFilePathTemp);
             }
+
+            // We need to flush the previous data if our ticker has changed in order to completely write all data to disk.
+            // Previously, the last day's data would not be written because the file was never closed. 
+            if (_previousTicker != ticker && !string.IsNullOrEmpty(_previousTicker))
+            {
+                _fileHandles[_previousTicker].CloseAndMove();
+                _fileHandles.Remove(_previousTicker);
+            }
+
+            // SOURCE[0],SYMBOL[1],TIMESTAMP_UTC[2],BULLISH_INTENSITY[3],BEARISH_INTENSITY[4],BULL_MINUS_BEAR[5],BULL_SCORED_MESSAGES[6],BEAR_SCORED_MESSAGES[7],BULL_BEAR_MSG_RATIO[8],TOTAL_SCANNED_MESSAGES[9]
+            fileHandle.Writer.WriteLine(ToCsv(timestamp, csv.Skip(3)));
+            _previousTicker = ticker;
         }
 
         /// <summary>
@@ -127,19 +151,33 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
             public StreamWriter Writer { get; private set; }
 
             /// <summary>
-            /// Path to the data (csv file)
+            /// Date of the data
             /// </summary>
-            public string DataPath { get; private set; }
+            public DateTime Time { get; }
+
+            /// <summary>
+            /// Path of the current writer
+            /// </summary>
+            public string DataFilePath;
 
             /// <summary>
             /// Creates writer instances and saves file path.
             /// Used to keep file open until the path changes for the symbol
             /// </summary>
             /// <param name="dataFilePath">Path to the file we want to write</param>
-            public TickerData(string dataFilePath)
+            public TickerData(string dataFilePath, DateTime day)
             {
-                DataPath = dataFilePath;
-                Writer = new StreamWriter(DataPath);
+                Time = day;
+                DataFilePath = dataFilePath;
+                Writer = new StreamWriter(dataFilePath);
+            }
+
+            public void CloseAndMove()
+            {
+                Writer.Close();
+
+                // Move temp file to its final path
+                File.Move(DataFilePath, Path.GetFileNameWithoutExtension(DataFilePath));
             }
 
             /// <summary>
@@ -148,9 +186,8 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
             /// <param name="dataFilePath">Path to the file we want to write</param>
             public void UpdateWriter(string dataFilePath)
             {
-                DataPath = dataFilePath;
-                Writer.Close();
-                Writer = new StreamWriter(DataPath);
+                CloseAndMove();
+                Writer = new StreamWriter(dataFilePath);
             }
         }
     }

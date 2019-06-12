@@ -13,33 +13,36 @@
  * limitations under the License.
 */
 
-using System.IO;
-using QuantConnect.Logging;
-using DataConverter = QuantConnect.ToolBox.PsychSignalDataConverter.PsychSignalDataConverter;
+using System;
 
 namespace QuantConnect.ToolBox.PsychSignalDataConverter
 {
     public static class PsychSignalDataConverterProgram
     {
         /// <summary>
+        /// Entry point for ToolBox application PsychSignalDataDownloader 
+        /// </summary>
+        /// <param name="startDate">Starting date. Cannot be greater than 15 days from today</param>
+        /// <param name="endDate">Ending date</param>
+        /// <param name="rawDataDestination">Directory to write raw data to</param>
+        /// <param name="apiKey">Psychsignal API key</param>
+        /// <param name="dataSource">Psychsignal data source</param>
+        public static void PsychSignalDataDownloader(DateTime startDate, DateTime endDate, string rawDataDestination, string apiKey, string dataSource)
+        {
+            var downloader = new PsychSignalDataDownloader(rawDataDestination, apiKey, dataSource);
+            downloader.Download(startDate, endDate);
+        }
+
+        /// <summary>
         /// Entry point for ToolBox application PsychSignalDataConverter
         /// </summary>
-        /// <param name="dataAbsolutePath"></param>
-        /// <param name="securityType"></param>
-        /// <param name="market"></param>
-        public static void PsychSignalDataConverter(string dataAbsolutePath, string securityType, string market)
+        /// <param name="sourceDirectory"></param>
+        /// <param name="destinationDirectory"></param>
+        /// <param name="knownTickerFolder"></param>
+        public static void PsychSignalDataConverter(string sourceDirectory, string destinationDirectory, string knownTickerFolder)
         {
-            Directory.CreateDirectory(Path.Combine(Globals.DataFolder, "equity", market, "alternative", "psychsignal"));
-
-            if (securityType != "equity")
-            {
-                Log.Error("Only equity data is supported. Exiting...");
-                return;
-            }
-
-            var converter = new DataConverter();
-
-            converter.Convert(dataAbsolutePath, SecurityType.Equity, market);
+            var converter = new PsychSignalDataConverter(sourceDirectory, destinationDirectory, knownTickerFolder);
+            converter.ConvertDirectory(sourceDirectory);
         }
     }
 }
