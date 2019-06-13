@@ -29,7 +29,6 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
         private readonly HashSet<string> _knownTickers;
         private readonly DirectoryInfo _rawSourceDirectory;
         private readonly DirectoryInfo _destinationDirectory;
-        private string _previousTicker;
 
         /// <summary>
         /// Converts psychsignal raw data into a format usable by Lean
@@ -49,19 +48,19 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
         }
         
         /// <summary>
-        /// Converts a specific file to Lean alternative data format
+        /// Converts a specific file to Lean alternative data format. Note that you must flush
+        /// after you're done converting a file to ensure that all data gets written to disk.
+        /// You can do that by calling <see cref="FlushAll"/> once you've finished processing
+        /// 
+        /// Note: Assumes that it will be fed files in ascending order by date
         /// </summary>
         /// <param name="sourceFilePath">File to process and convert</param>
         public void Convert(FileInfo sourceFilePath)
         {
             var file = File.ReadLines(sourceFilePath.FullName);
-            var totalLines = file.Count();
-            var lineCount = 0;
 
             foreach (var line in file)
             {
-                lineCount++;
-
                 var csv = line.Split(',');
                 var ticker = csv[1].ToLower();
                 DateTime timestamp;
@@ -78,31 +77,40 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
                     _fileHandles[ticker] = handle;
                 }
                 
-                // When the ticker changes to another one, it's time to attempt disposal of the previous writer
-                if (_previousTicker != ticker && !string.IsNullOrEmpty(_previousTicker))
-                {
-                    var previousHandle = _fileHandles[_previousTicker];
-
-                    previousHandle.Dispose();
-                }
-                
                 handle.Append(timestamp, csv);
-
-                // Writes the final ticker's data if we've reached the end of the file and another file doesn't exist after the current
-                if (lineCount == totalLines)
-                {
-                    var hasNextFile = _rawSourceDirectory
-                        .GetFiles("*.csv", SearchOption.TopDirectoryOnly)
-                        .Any(x => x.Name.StartsWith($"{timestamp.AddHours(1):yyyyMMdd_HH}"));
-
-                    if (!hasNextFile)
-                    {
-                        handle.Dispose();
-                    }
-                }
-
-                _previousTicker = ticker;
             }
+        }
+
+        /// <summary>
+        /// Filter raw files to be inclusive within the date range specified and converts those files.
+        /// </summary>
+        /// <param name="startDateUtc">Date to start parsing files from</param>
+        /// <param name="endDateUtc">Date to stop parsing files</param>
+        /// <remarks>Inclusive on the lower bound, and exclusive on the upper bound</remarks>
+        public void ConvertFrom(DateTime startDateUtc, DateTime endDateUtc)
+        {
+            // Filter for files by name and bounds, then order by date
+            var files = _rawSourceDirectory.GetFiles("*.csv", SearchOption.TopDirectoryOnly)
+                .Where(
+                    x =>
+                    {
+                        DateTime fileDate;
+                        if (!DateTime.TryParseExact(x.Name.Substring(0, 11), "yyyyMMdd_HH", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal, out fileDate))
+                        {
+                            return false;
+                        }
+
+                        return fileDate >= startDateUtc && fileDate < endDateUtc;
+                    }
+                )
+                .OrderBy(x => DateTime.ParseExact(x.Name.Substring(0, 11), "yyyyMMdd_HH", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
+
+            foreach (var rawFile in files)
+            {
+                Convert(rawFile);
+            }
+            
+            FlushAll();
         }
 
         /// <summary>
@@ -110,17 +118,44 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
         /// </summary>
         public void ConvertDirectory()
         {
-            foreach (var rawFile in _rawSourceDirectory.GetFiles("*.csv", SearchOption.AllDirectories))
+            // Filter for raw data with file names formatted as "yyyyMMdd_HH.*"
+            // `GetDirectory()` doesn't guarantee file order, so we must order it manually ourselves
+            var files = _rawSourceDirectory.GetFiles("*.csv", SearchOption.TopDirectoryOnly)
+                .Where(
+                    x =>
+                    {
+                        DateTime fileDate;
+                        return DateTime.TryParseExact(x.Name.Substring(0, 11), "yyyyMMdd_HH", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal, out fileDate);
+                    }
+                )
+                .OrderBy(x => DateTime.ParseExact(x.Name.Substring(0, 11), "yyyyMMdd_HH", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
+
+            foreach (var rawFile in files)
             {
                 Convert(rawFile);
             }
+
+            FlushAll();
         }
-        
+
+        /// <summary>
+        /// Flushes all open <see cref="StreamWriter"/> instances.
+        /// Should be called once the data has finished processing
+        /// </summary>
+        public void FlushAll()
+        {
+            foreach (var handle in _fileHandles.Values)
+            {
+                handle.Dispose();
+            }
+        }
+
         private class TickerData : IDisposable
         {
-            private StreamWriter _writer;
-            private readonly string _ticker;
             private readonly DirectoryInfo _destinationDirectory;
+            private readonly string _ticker;
+
+            private StreamWriter _writer;
             private string _tempPath;
             private DateTime _date;
 
@@ -135,7 +170,8 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
             {
                 _date = date;
                 _ticker = ticker;
-                _tempPath = Path.GetTempFileName();
+                // Using win32 Path.GetTempFileName can cause filename collisions
+                _tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
                 _writer = new StreamWriter(_tempPath);
                 _destinationDirectory = destinationDirectory;
             }
@@ -154,7 +190,7 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
                     Dispose();
 
                     _date = date;
-                    _tempPath = Path.GetTempFileName();
+                    _tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
                     _writer = new StreamWriter(_tempPath);
                 }
 
@@ -165,17 +201,18 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
             /// Moves the temporary file containing data to the final path, deleting
             /// any existing file to avoid conflicts when moving
             /// </summary>
-            public void MoveTempFile()
+            private void MoveTempFile()
             {
                 var tickerDirectory = Path.Combine(_destinationDirectory.FullName, _ticker);
                 var writePath = Path.Combine(tickerDirectory, $"{_date:yyyyMMdd}.csv");
 
                 Directory.CreateDirectory(tickerDirectory);
 
-                // Have only the latest version of the data
+                // We only want the latest version of the data
                 if (File.Exists(writePath))
                 {
                     File.Delete(writePath);
+                    Log.Trace($"PsychSignalDataConverter.TickerData.MoveTempFile(): Deleted existing file: {writePath}");
                 }
 
                 File.Move(_tempPath, writePath);
@@ -196,6 +233,7 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
             
             /// <summary>
             /// Flushes and closes the underlying <see cref="StreamWriter"/>
+            /// and moves the temp file to its final path
             /// </summary>
             public void Dispose()
             {

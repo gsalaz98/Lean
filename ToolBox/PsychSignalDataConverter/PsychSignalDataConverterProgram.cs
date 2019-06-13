@@ -22,15 +22,15 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
         /// <summary>
         /// Entry point for ToolBox application PsychSignalDataDownloader 
         /// </summary>
-        /// <param name="startDate">Starting date. Cannot be greater than 15 days from today</param>
-        /// <param name="endDate">Ending date</param>
+        /// <param name="startDateUtc">Starting date. Cannot be greater than 15 days from today</param>
+        /// <param name="endDateUtc">Ending date</param>
         /// <param name="rawDataDestination">Directory to write raw data to</param>
         /// <param name="apiKey">Psychsignal API key</param>
         /// <param name="dataSource">Psychsignal data source</param>
-        public static void PsychSignalDataDownloader(DateTime startDate, DateTime endDate, string rawDataDestination, string apiKey, string dataSource)
+        public static void PsychSignalDataDownloader(DateTime startDateUtc, DateTime endDateUtc, string rawDataDestination, string apiKey, string dataSource)
         {
             var downloader = new PsychSignalDataDownloader(rawDataDestination, apiKey, dataSource);
-            downloader.Download(startDate, endDate);
+            downloader.Download(startDateUtc, endDateUtc);
         }
 
         /// <summary>

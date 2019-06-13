@@ -57,23 +57,36 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
         }
         
         /// <summary>
-        /// Download the data from the given starting date to the ending date 
+        /// Download the data from the given starting date to the ending date.
+        /// Note that if the ending date is in the same hour as the current time,
+        /// we will lower the <paramref name="endDateUtc" /> by one hour in order
+        /// to make sure that we only download complete, non-changing dataa
         /// </summary>
-        /// <param name="startDate">Starting date. This time is should be in Eastern Time</param>
-        /// <param name="endDate">Ending date. This time is should be in Eastern Time</param>
-        public void Download(DateTime startDate, DateTime endDate)
+        /// <param name="startDateUtc">Starting date</param>
+        /// <param name="endDateUtc">Ending date</param>
+        public void Download(DateTime startDateUtc, DateTime endDateUtc)
         {
-            if (startDate < DateTime.UtcNow.ConvertFromUtc(TimeZones.NewYork).AddDays(-15))
+            if (startDateUtc < endDateUtc.AddDays(-15))
             {
                 throw new ArgumentException("The starting date can only be at most 15 days from now");
             }
-            
+
+            var startDateEasternStandard = startDateUtc.ConvertFromUtc(TimeZones.EasternStandard);
+            var endDateEasternStandard = endDateUtc.ConvertFromUtc(TimeZones.EasternStandard);
+            var now = DateTime.UtcNow;
+
             Directory.CreateDirectory(_rawDataDestination);
             
-            // PsychSignal paginates by hour
-            for (; startDate < endDate.ConvertFromUtc(TimeZones.NewYork); startDate = startDate.AddHours(1))
+            // Makes sure we only get final, non-changing data by checking if the current hour matches the hour of the upper date bound.
+            if (new DateTime(now.Year, now.Month, now.Day, now.Hour, 0, 0) == new DateTime(endDateUtc.Year, endDateUtc.Month, endDateUtc.Day, endDateUtc.Hour, 0, 0))
             {
-                var rawDataPath = Path.Combine(_rawDataDestination, $"{startDate:yyyyMMdd_HH}_{_dataSource}.csv");
+                endDateEasternStandard = endDateEasternStandard.AddHours(-1);
+            }
+            
+            // PsychSignal paginates data by hour
+            for (; startDateEasternStandard < endDateEasternStandard; startDateEasternStandard = startDateEasternStandard.AddHours(1), startDateUtc = startDateUtc.AddHours(1))
+            {
+                var rawDataPath = Path.Combine(_rawDataDestination, $"{startDateUtc:yyyyMMdd_HH}_{_dataSource}.csv");
                 var rawDataPathTemp = $"{rawDataPath}.tmp";
                 
                 // Don't download files we already have
@@ -92,7 +105,7 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
                     {
                         using (var client = new WebClient())
                         {
-                            client.DownloadFile($"{_baseUrl}/replay?apikey={_apiKey}&update=1m&sources={_dataSource}&from={startDate:yyyyMMddHH}&format=csv", rawDataPathTemp);
+                            client.DownloadFile($"{_baseUrl}/replay?apikey={_apiKey}&update=1m&sources={_dataSource}&from={startDateEasternStandard:yyyyMMddHH}&format=csv", rawDataPathTemp);
                             File.Move(rawDataPathTemp, rawDataPath);
                             break;
                         }
@@ -103,7 +116,7 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
 
                         if (retries == MaxRetries - 1)
                         {
-                            Log.Error($"PsychSignalDataDownloader.Download(): We've reached the maximum number of retries for date {startDate:yyyy-MM-dd HH:00:00}");
+                            Log.Error($"PsychSignalDataDownloader.Download(): We've reached the maximum number of retries for date {startDateEasternStandard:yyyy-MM-dd HH:00:00}");
                             continue;
                         }
                         if (response == null)
