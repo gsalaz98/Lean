@@ -74,7 +74,7 @@ namespace QuantConnect.Lean.Engine.DataFeeds.Enumerators.Factories
         /// <returns>An enumerator reading the subscription request</returns>
         public IEnumerator<BaseData> CreateEnumerator(SubscriptionRequest request, IDataProvider dataProvider)
         {
-            var mapFileResolver = request.Configuration.SecurityType == SecurityType.Equity ||
+            var mapFileResolver = request.Configuration.UsesMapFiles || 
                                   request.Configuration.SecurityType == SecurityType.Option
                                     ? _mapFileProvider.Get(request.Security.Symbol.ID.Market)
                                     : MapFileResolver.Empty;
