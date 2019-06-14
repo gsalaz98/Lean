@@ -123,10 +123,13 @@ namespace QuantConnect.Data
         {
             typeof(TiingoDailyData),
             typeof(Quandl),
+            
+            // Only for regression algorithm test
+            typeof(RegressionAlgorithmUSEquities)
         };
         
         /// <summary>
-        /// 
+        /// Indicates if there is support for map files.
         /// </summary>
         public bool UsesMapFiles { get; }
 

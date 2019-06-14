@@ -88,7 +88,7 @@ namespace QuantConnect.Lean.Engine.DataFeeds.Enumerators.Factories
                 {
                     var mapFile = mapFileResolver.ResolveMapFile(
                         config.Symbol.ID.Symbol,
-                        config.Symbol.ID.Date);
+                        !config.IsCustomData ? config.Symbol.ID.Date : DateTime.UtcNow);
 
                     // only take the resolved map file if it has data, otherwise we'll use the empty one we defined above
                     if (mapFile.Any()) mapFileToUse = mapFile;
