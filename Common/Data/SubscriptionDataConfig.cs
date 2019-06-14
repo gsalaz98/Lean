@@ -19,6 +19,8 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using NodaTime;
 using QuantConnect.Data.Consolidators;
+using QuantConnect.Data.Custom;
+using QuantConnect.Data.Custom.Tiingo;
 using QuantConnect.Securities;
 using QuantConnect.Util;
 
@@ -114,6 +116,18 @@ namespace QuantConnect.Data
         }
 
         /// <summary>
+        /// Some custom data sources should support symbol mapping because the custom data
+        /// is directly related to symbols/tickers. Example: SEC data
+        /// </summary>
+        public readonly HashSet<Type> MapFileTypes = new HashSet<Type>
+        {
+            typeof(TiingoDailyData),
+            typeof(Quandl),
+        };
+
+        public bool UsesMapFiles { get; private set; }
+
+        /// <summary>
         /// Gets the market / scope of the symbol
         /// </summary>
         public readonly string Market;
@@ -189,6 +203,7 @@ namespace QuantConnect.Data
             IsFilteredSubscription = isFilteredSubscription;
             Consolidators = new HashSet<IDataConsolidator>();
             DataNormalizationMode = dataNormalizationMode;
+            UsesMapFiles = SecurityType == SecurityType.Equity || MapFileTypes.Contains(Type);
 
             TickType = tickType ?? LeanData.GetCommonTickTypeForCommonDataTypes(objectType, SecurityType);
 
@@ -265,6 +280,7 @@ namespace QuantConnect.Data
             PriceScaleFactor = config.PriceScaleFactor;
             SumOfDividends = config.SumOfDividends;
             Consolidators = config.Consolidators;
+            UsesMapFiles = config.UsesMapFiles;
         }
 
         /// <summary>

@@ -222,7 +222,7 @@ namespace QuantConnect.Lean.Engine.DataFeeds
             _mapFile = new MapFile(_config.Symbol.Value, new List<MapFileRow>());
 
             // load up the map and factor files for equities
-            if (!_config.IsCustomData && _config.SecurityType == SecurityType.Equity)
+            if (_config.UsesMapFiles)
             {
                 try
                 {

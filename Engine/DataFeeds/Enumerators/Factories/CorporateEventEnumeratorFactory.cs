@@ -82,7 +82,7 @@ namespace QuantConnect.Lean.Engine.DataFeeds.Enumerators.Factories
             var mapFileToUse = new MapFile(config.Symbol.Value, new List<MapFileRow>());
 
             // load up the map and factor files for equities
-            if (!config.IsCustomData && config.SecurityType == SecurityType.Equity)
+            if (config.UsesMapFiles)
             {
                 try
                 {
