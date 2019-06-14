@@ -14,6 +14,7 @@
 */
 
 using System;
+using System.Collections.Generic;
 using QuantConnect.Data;
 using QuantConnect.Interfaces;
 using QuantConnect.Data.Market;
@@ -27,25 +28,58 @@ namespace QuantConnect.Algorithm.CSharp
     /// Basic template algorithm simply initializes the date range and cash. This is a skeleton
     /// framework you can use for designing an algorithm.
     /// </summary>
-    /// <meta name="tag" content="using data" />
-    /// <meta name="tag" content="using quantconnect" />
-    /// <meta name="tag" content="trading and orders" />
     public class CustomDataUsingMapFileRegressionAlgorithm: QCAlgorithm, IRegressionAlgorithmDefinition
     {
+        private Symbol _symbol;
+        private bool _changedSymbol;
+
         public override void Initialize()
         {
             SetStartDate(2018, 1, 1);
             SetEndDate(2019, 5, 31);
 
-            // KORS renamed to 
-            var symbol = AddData<TestUSEquities>("CPRI", Resolution.Daily);
+            // KORS renamed to CPRI on 2019-01-02
+            _symbol = AddData<TestUSEquities>("KORS", Resolution.Daily).Symbol;
         }
 
         public override void OnData(Slice slice)
         {
+            if (slice.SymbolChangedEvents.ContainsKey(_symbol))
+            {
+                Log($"Ticker changed from: {slice.SymbolChangedEvents[_symbol].OldSymbol} to {slice.SymbolChangedEvents[_symbol].NewSymbol}");
+                _changedSymbol = true;
+            }
         }
-    }
 
+        public override void OnEndOfAlgorithm()
+        {
+            if (!_changedSymbol)
+            {
+                throw new Exception("The ticker did not rename throughout the course of its life even though it should have");
+            }
+        }
+
+        /// <summary>
+        /// This is used by the regression test system to indicate if the open source Lean repository has the required data to run this algorithm.
+        /// </summary>
+        public bool CanRunLocally { get; } = false;
+
+        /// <summary>
+        /// This is used by the regression test system to indicate which languages this algorithm is written in.
+        /// </summary>
+        public Language[] Languages { get; } = { Language.CSharp };
+
+        /// <summary>
+        /// This is used by the regression test system to indicate what the expected statistics are from running the algorithm
+        /// </summary>
+        public Dictionary<string, string> ExpectedStatistics => new Dictionary<string, string>
+        {
+        };
+    }
+    
+    /// <summary>
+    /// A copy of the <see cref="TradeBar"/> class
+    /// </summary>
     public class TestUSEquities : BaseData
     {
         // scale factor used in QC equity/forex data files

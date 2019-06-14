@@ -108,7 +108,7 @@ namespace QuantConnect.Lean.Engine.HistoricalData
                 ? _mapFileProvider.Get(config.Market)
                 : MapFileResolver.Empty;
 
-            if (config.SecurityType == SecurityType.Equity)
+            if (config.UsesMapFiles)
             {
                 var mapFile = mapFileResolver.ResolveMapFile(config.Symbol.ID.Symbol, config.Symbol.ID.Date);
                 config.MappedSymbol = mapFile.GetMappedSymbol(start, config.MappedSymbol);
