@@ -15,13 +15,10 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using QuantConnect.Data;
-using QuantConnect.Interfaces;
-using QuantConnect.Data.Market;
-using QuantConnect.Util;
-using System.Globalization;
-using System.Threading;
 using QuantConnect.Data.Custom;
+using QuantConnect.Interfaces;
 
 namespace QuantConnect.Algorithm.CSharp
 {
@@ -32,23 +29,27 @@ namespace QuantConnect.Algorithm.CSharp
     {
         private Symbol _symbol;
         private bool _changedSymbol;
-        
+        private DateTime _actualStartDate = default(DateTime);
+        private DateTime _startDate = new DateTime(2018, 1, 1);
+        private DateTime _endDate = new DateTime(2019, 5, 31);
+
         /// <summary>
         /// Ticker we use for testing
         /// </summary>
-        public string Ticker = "CPRI";
+        public const string Ticker = "CPRI";
 
         /// <summary>
         /// Initialise the data and resolution required, as well as the cash and start-end dates for your algorithm. All algorithms must initialized.
         /// </summary>
         public override void Initialize()
         {
-            SetStartDate(2018, 1, 1);
-            SetEndDate(2019, 5, 31);
+            SetStartDate(_startDate.Year, _startDate.Month, _startDate.Day);
+            SetEndDate(_endDate.Year, _endDate.Month, _endDate.Day);
             SetCash(100000);
 
             // KORS renamed to CPRI on 2019-01-02
-            _symbol = AddData<RegressionAlgorithmUSEquities>("CPRI", Resolution.Daily).Symbol;
+            _symbol = AddData<RegressionAlgorithmUSEquities>(Ticker, Resolution.Daily).Symbol;
+            //_symbol = AddEquity(Ticker, Resolution.Daily).Symbol;
         }
         
         /// <summary>
@@ -57,7 +58,16 @@ namespace QuantConnect.Algorithm.CSharp
         /// <param name="slice"></param>
         public override void OnData(Slice slice)
         {
-            if (slice.SymbolChangedEvents.ContainsKey(_symbol))
+            // On the initial piece of data, we receive a rename event mapping the current symbol to the oldest ticker.
+            if (_actualStartDate == default(DateTime))
+            {
+                _actualStartDate = Time;
+            }
+
+            Log($"{Time:yyyy-MM-dd HH:mm:ss} - Price: {Securities[_symbol].Price}");
+
+            // Don't process the initial rename event
+            if (slice.SymbolChangedEvents.ContainsKey(_symbol) && _actualStartDate != Time)
             {
                 Log($"{Time:yyyy-MM-dd HH:mm:ss} - Ticker changed from: {slice.SymbolChangedEvents[_symbol].OldSymbol} to {slice.SymbolChangedEvents[_symbol].NewSymbol}");
                 _changedSymbol = true;
@@ -65,6 +75,7 @@ namespace QuantConnect.Algorithm.CSharp
                 if (!Portfolio.Invested)
                 {
                     SetHoldings(_symbol, 1.0m);
+                    Log($"Bought {_symbol.Value} at {Time}");
                 }
             }
         }
@@ -95,6 +106,25 @@ namespace QuantConnect.Algorithm.CSharp
         /// </summary>
         public Dictionary<string, string> ExpectedStatistics => new Dictionary<string, string>
         {
+            {"Total Trades", "1"},
+            {"Average Win", "0%"},
+            {"Average Loss", "0%"},
+            {"Compounding Annual Return", "-10.401%"},
+            {"Drawdown", "34.800%"},
+            {"Expectancy", "0"},
+            {"Net Profit", "-14.354%"},
+            {"Sharpe Ratio", "-0.375"},
+            {"Loss Rate", "0%"},
+            {"Win Rate", "0%"},
+            {"Profit-Loss Ratio", "0"},
+            {"Alpha", "0.097"},
+            {"Beta", "-9.101"},
+            {"Annual Standard Deviation", "0.225"},
+            {"Annual Variance", "0.05"},
+            {"Information Ratio", "-0.463"},
+            {"Tracking Error", "0.225"},
+            {"Treynor Ratio", "0.009"},
+            {"Total Fees", "$0.00"},
         };
     }
 }

@@ -22,13 +22,12 @@ using QuantConnect.Data.Market;
 namespace QuantConnect.Data.Custom
 {
     /// <summary>
-    /// A copy of the <see cref="TradeBar"/> class.
+    /// A copy of the <see cref="RegressionAlgorithmUSEquities"/> class.
     /// DO NOT USE. This class is defined only for CustomDataUsingMapFileRegressionAlgorithm.
-    /// We define it here instead of the QuantConnect.Algorithm.CSharp namespace in order to be able
-    /// to add it to the list of supported mapfile custom data types.
+    /// We define it here instead of 
     /// Added to <see cref="SubscriptionDataConfig.MapFileTypes"/> in order to enable support for map files.
     /// </summary>
-    public class RegressionAlgorithmUSEquities: BaseData
+    public class RegressionAlgorithmUSEquities : BaseData, IBaseDataBar
     {
         // scale factor used in QC equity/forex data files
         private const decimal _scaleFactor = 1 / 10000m;
@@ -57,7 +56,7 @@ namespace QuantConnect.Data.Custom
         }
 
         /// <summary>
-        /// High price of the TradeBar during the time period.
+        /// High price of the RegressionAlgorithmUSEquities during the time period.
         /// </summary>
         public virtual decimal High
         {
@@ -70,7 +69,7 @@ namespace QuantConnect.Data.Custom
         }
 
         /// <summary>
-        /// Low price of the TradeBar during the time period.
+        /// Low price of the RegressionAlgorithmUSEquities during the time period.
         /// </summary>
         public virtual decimal Low
         {
@@ -83,7 +82,7 @@ namespace QuantConnect.Data.Custom
         }
 
         /// <summary>
-        /// Closing price of the TradeBar. Defined as the price at Start Time + TimeSpan.
+        /// Closing price of the RegressionAlgorithmUSEquities. Defined as the price at Start Time + TimeSpan.
         /// </summary>
         public virtual decimal Close
         {
@@ -109,6 +108,468 @@ namespace QuantConnect.Data.Custom
         /// </summary>
         public virtual TimeSpan Period { get; set; }
 
+        //In Base Class: Alias of Closing:
+        //public decimal Price;
+
+        //Symbol of Asset.
+        //In Base Class: public Symbol Symbol;
+
+        //In Base Class: DateTime Of this RegressionAlgorithmUSEquities
+        //public DateTime Time;
+
+        /// <summary>
+        /// Default initializer to setup an empty tradebar.
+        /// </summary>
+        public RegressionAlgorithmUSEquities()
+        {
+            Symbol = Symbol.Empty;
+            DataType = MarketDataType.Base;
+            Period = TimeSpan.FromMinutes(1);
+        }
+
+        /// <summary>
+        /// Cloner constructor for implementing fill forward.
+        /// Return a new instance with the same values as this original.
+        /// </summary>
+        /// <param name="original">Original tradebar object we seek to clone</param>
+        public RegressionAlgorithmUSEquities(RegressionAlgorithmUSEquities original)
+        {
+            DataType = MarketDataType.Base;
+            Time = new DateTime(original.Time.Ticks);
+            Symbol = original.Symbol;
+            Value = original.Close;
+            Open = original.Open;
+            High = original.High;
+            Low = original.Low;
+            Close = original.Close;
+            Volume = original.Volume;
+            Period = original.Period;
+            _initialized = 1;
+        }
+
+        /// <summary>
+        /// Initialize Trade Bar with OHLC Values:
+        /// </summary>
+        /// <param name="time">DateTime Timestamp of the bar</param>
+        /// <param name="symbol">Market MarketType Symbol</param>
+        /// <param name="open">Decimal Opening Price</param>
+        /// <param name="high">Decimal High Price of this bar</param>
+        /// <param name="low">Decimal Low Price of this bar</param>
+        /// <param name="close">Decimal Close price of this bar</param>
+        /// <param name="volume">Volume sum over day</param>
+        /// <param name="period">The period of this bar, specify null for default of 1 minute</param>
+        public RegressionAlgorithmUSEquities(DateTime time, Symbol symbol, decimal open, decimal high, decimal low, decimal close, decimal volume, TimeSpan? period = null)
+        {
+            Time = time;
+            Symbol = symbol;
+            Value = close;
+            Open = open;
+            High = high;
+            Low = low;
+            Close = close;
+            Volume = volume;
+            Period = period ?? TimeSpan.FromMinutes(1);
+            DataType = MarketDataType.Base;
+            _initialized = 1;
+        }
+        
+        /// <summary>
+        /// Parses the trade bar data line assuming QC data formats
+        /// </summary>
+        public static RegressionAlgorithmUSEquities Parse(SubscriptionDataConfig config, string line, DateTime baseDate)
+        {
+            switch (config.SecurityType)
+            {
+                case SecurityType.Equity:
+                    return ParseEquity(config, line, baseDate);
+
+                case SecurityType.Forex:
+                case SecurityType.Crypto:
+                    return ParseForex(config, line, baseDate);
+
+                case SecurityType.Cfd:
+                    return ParseCfd(config, line, baseDate);
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Parses equity trade bar data into the specified tradebar type, useful for custom types with OHLCV data deriving from RegressionAlgorithmUSEquities
+        /// </summary>
+        /// <typeparam name="T">The requested output type, must derive from RegressionAlgorithmUSEquities</typeparam>
+        /// <param name="config">Symbols, Resolution, DataType, </param>
+        /// <param name="line">Line from the data file requested</param>
+        /// <param name="date">Date of this reader request</param>
+        /// <returns></returns>
+        public static T ParseEquity<T>(SubscriptionDataConfig config, string line, DateTime date)
+            where T : RegressionAlgorithmUSEquities, new()
+        {
+            var tradeBar = new T
+            {
+                Symbol = config.Symbol,
+                Period = config.Increment
+            };
+
+            ParseEquity(tradeBar, config, line, date);
+
+            return tradeBar;
+        }
+
+        private static void ParseEquity(RegressionAlgorithmUSEquities tradeBar, SubscriptionDataConfig config, string line, DateTime date)
+        {
+            var csv = line.ToCsv(6);
+            if (config.Resolution == Resolution.Daily || config.Resolution == Resolution.Hour)
+            {
+                // hourly and daily have different time format, and can use slow, robust c# parser.
+                tradeBar.Time = DateTime.ParseExact(csv[0], DateFormat.TwelveCharacter, CultureInfo.InvariantCulture).ConvertTo(config.DataTimeZone, config.ExchangeTimeZone);
+            }
+            else
+            {
+                // Using custom "ToDecimal" conversion for speed on high resolution data.
+                tradeBar.Time = date.Date.AddMilliseconds(csv[0].ToInt32()).ConvertTo(config.DataTimeZone, config.ExchangeTimeZone);
+            }
+
+            tradeBar.Open = csv[1].ToDecimal() * _scaleFactor;
+            tradeBar.High = csv[2].ToDecimal() * _scaleFactor;
+            tradeBar.Low = csv[3].ToDecimal() * _scaleFactor;
+            tradeBar.Close = csv[4].ToDecimal() * _scaleFactor;
+            tradeBar.Volume = csv[5].ToDecimal();
+        }
+
+        /// <summary>
+        /// Parses equity trade bar data into the specified tradebar type, useful for custom types with OHLCV data deriving from RegressionAlgorithmUSEquities
+        /// </summary>
+        /// <param name="config">Symbols, Resolution, DataType, </param>
+        /// <param name="line">Line from the data file requested</param>
+        /// <param name="date">Date of this reader request</param>
+        /// <returns></returns>
+        public static RegressionAlgorithmUSEquities ParseEquity(SubscriptionDataConfig config, string line, DateTime date)
+        {
+            var tradeBar = new RegressionAlgorithmUSEquities
+            {
+                Symbol = config.Symbol,
+                Period = config.Increment
+            };
+            ParseEquity(tradeBar, config, line, date);
+            return tradeBar;
+        }
+
+        /// <summary>
+        /// Parses forex trade bar data into the specified tradebar type, useful for custom types with OHLCV data deriving from RegressionAlgorithmUSEquities
+        /// </summary>
+        /// <typeparam name="T">The requested output type, must derive from RegressionAlgorithmUSEquities</typeparam>
+        /// <param name="config">Symbols, Resolution, DataType, </param>
+        /// <param name="line">Line from the data file requested</param>
+        /// <param name="date">The base data used to compute the time of the bar since the line specifies a milliseconds since midnight</param>
+        /// <returns></returns>
+        public static T ParseForex<T>(SubscriptionDataConfig config, string line, DateTime date)
+            where T : RegressionAlgorithmUSEquities, new()
+        {
+            var tradeBar = new T
+            {
+                Symbol = config.Symbol,
+                Period = config.Increment
+            };
+            ParseForex(tradeBar, config, line, date);
+
+            return tradeBar;
+        }
+
+        private static void ParseForex(RegressionAlgorithmUSEquities tradeBar, SubscriptionDataConfig config, string line, DateTime date)
+        {
+            var csv = line.ToCsv(5);
+            if (config.Resolution == Resolution.Daily || config.Resolution == Resolution.Hour)
+            {
+                // hourly and daily have different time format, and can use slow, robust c# parser.
+                tradeBar.Time = DateTime.ParseExact(csv[0], DateFormat.TwelveCharacter, CultureInfo.InvariantCulture).ConvertTo(config.DataTimeZone, config.ExchangeTimeZone);
+            }
+            else
+            {
+                //Fast decimal conversion
+                tradeBar.Time = date.Date.AddMilliseconds(csv[0].ToInt32()).ConvertTo(config.DataTimeZone, config.ExchangeTimeZone);
+            }
+
+            tradeBar.Open = csv[1].ToDecimal();
+            tradeBar.High = csv[2].ToDecimal();
+            tradeBar.Low = csv[3].ToDecimal();
+            tradeBar.Close = csv[4].ToDecimal();
+        }
+
+        /// <summary>
+        /// Parses crypto trade bar data into the specified tradebar type, useful for custom types with OHLCV data deriving from RegressionAlgorithmUSEquities
+        /// </summary>
+        /// <typeparam name="T">The requested output type, must derive from RegressionAlgorithmUSEquities</typeparam>
+        /// <param name="config">Symbols, Resolution, DataType, </param>
+        /// <param name="line">Line from the data file requested</param>
+        /// <param name="date">The base data used to compute the time of the bar since the line specifies a milliseconds since midnight</param>
+        public static T ParseCrypto<T>(SubscriptionDataConfig config, string line, DateTime date)
+            where T : RegressionAlgorithmUSEquities, new()
+        {
+            var tradeBar = new T
+            {
+                Symbol = config.Symbol,
+                Period = config.Increment
+            };
+            ParseCrypto(tradeBar, config, line, date);
+
+            return tradeBar;
+        }
+
+        /// <summary>
+        /// Parses crypto trade bar data into the specified tradebar type, useful for custom types with OHLCV data deriving from RegressionAlgorithmUSEquities
+        /// </summary>
+        /// <param name="config">Symbols, Resolution, DataType, </param>
+        /// <param name="line">Line from the data file requested</param>
+        /// <param name="date">The base data used to compute the time of the bar since the line specifies a milliseconds since midnight</param>
+        public static RegressionAlgorithmUSEquities ParseCrypto(SubscriptionDataConfig config, string line, DateTime date)
+        {
+            var tradeBar = new RegressionAlgorithmUSEquities
+            {
+                Symbol = config.Symbol,
+                Period = config.Increment
+            };
+            ParseCrypto(tradeBar, config, line, date);
+
+            return tradeBar;
+        }
+
+        private static void ParseCrypto(RegressionAlgorithmUSEquities tradeBar, SubscriptionDataConfig config, string line, DateTime date)
+        {
+            var csv = line.ToCsv(6);
+            if (config.Resolution == Resolution.Daily || config.Resolution == Resolution.Hour)
+            {
+                // hourly and daily have different time format, and can use slow, robust c# parser.
+                tradeBar.Time = DateTime.ParseExact(csv[0], DateFormat.TwelveCharacter, CultureInfo.InvariantCulture).ConvertTo(config.DataTimeZone, config.ExchangeTimeZone);
+            }
+            else
+            {
+                //Fast decimal conversion
+                tradeBar.Time = date.Date.AddMilliseconds(csv[0].ToInt32()).ConvertTo(config.DataTimeZone, config.ExchangeTimeZone);
+            }
+
+            tradeBar.Open = csv[1].ToDecimal();
+            tradeBar.High = csv[2].ToDecimal();
+            tradeBar.Low = csv[3].ToDecimal();
+            tradeBar.Close = csv[4].ToDecimal();
+            tradeBar.Volume = csv[5].ToDecimal();
+        }
+
+        /// <summary>
+        /// Parses forex trade bar data into the specified tradebar type, useful for custom types with OHLCV data deriving from RegressionAlgorithmUSEquities
+        /// </summary>
+        /// <param name="config">Symbols, Resolution, DataType, </param>
+        /// <param name="line">Line from the data file requested</param>
+        /// <param name="date">The base data used to compute the time of the bar since the line specifies a milliseconds since midnight</param>
+        /// <returns></returns>
+        public static RegressionAlgorithmUSEquities ParseForex(SubscriptionDataConfig config, string line, DateTime date)
+        {
+            var tradeBar = new RegressionAlgorithmUSEquities
+            {
+                Symbol = config.Symbol,
+                Period = config.Increment
+            };
+            ParseForex(tradeBar, config, line, date);
+            return tradeBar;
+        }
+
+        /// <summary>
+        /// Parses CFD trade bar data into the specified tradebar type, useful for custom types with OHLCV data deriving from RegressionAlgorithmUSEquities
+        /// </summary>
+        /// <typeparam name="T">The requested output type, must derive from RegressionAlgorithmUSEquities</typeparam>
+        /// <param name="config">Symbols, Resolution, DataType, </param>
+        /// <param name="line">Line from the data file requested</param>
+        /// <param name="date">The base data used to compute the time of the bar since the line specifies a milliseconds since midnight</param>
+        /// <returns></returns>
+        public static T ParseCfd<T>(SubscriptionDataConfig config, string line, DateTime date)
+            where T : RegressionAlgorithmUSEquities, new()
+        {
+            // CFD has the same data format as Forex
+            return ParseForex<T>(config, line, date);
+        }
+
+        /// <summary>
+        /// Parses CFD trade bar data into the specified tradebar type, useful for custom types with OHLCV data deriving from RegressionAlgorithmUSEquities
+        /// </summary>
+        /// <param name="config">Symbols, Resolution, DataType, </param>
+        /// <param name="line">Line from the data file requested</param>
+        /// <param name="date">The base data used to compute the time of the bar since the line specifies a milliseconds since midnight</param>
+        /// <returns></returns>
+        public static RegressionAlgorithmUSEquities ParseCfd(SubscriptionDataConfig config, string line, DateTime date)
+        {
+            // CFD has the same data format as Forex
+            return ParseForex(config, line, date);
+        }
+
+        /// <summary>
+        /// Parses Option trade bar data into the specified tradebar type, useful for custom types with OHLCV data deriving from RegressionAlgorithmUSEquities
+        /// </summary>
+        /// <typeparam name="T">The requested output type, must derive from RegressionAlgorithmUSEquities</typeparam>
+        /// <param name="config">Symbols, Resolution, DataType, </param>
+        /// <param name="line">Line from the data file requested</param>
+        /// <param name="date">The base data used to compute the time of the bar since the line specifies a milliseconds since midnight</param>
+        /// <returns></returns>
+        public static T ParseOption<T>(SubscriptionDataConfig config, string line, DateTime date)
+            where T : RegressionAlgorithmUSEquities, new()
+        {
+            var tradeBar = new T
+            {
+                Period = config.Increment,
+                Symbol = config.Symbol
+            };
+
+            var csv = line.ToCsv(6);
+            if (config.Resolution == Resolution.Daily || config.Resolution == Resolution.Hour)
+            {
+                // hourly and daily have different time format, and can use slow, robust c# parser.
+                tradeBar.Time = DateTime.ParseExact(csv[0], DateFormat.TwelveCharacter, CultureInfo.InvariantCulture).ConvertTo(config.DataTimeZone, config.ExchangeTimeZone);
+            }
+            else
+            {
+                // Using custom "ToDecimal" conversion for speed on high resolution data.
+                tradeBar.Time = date.Date.AddMilliseconds(csv[0].ToInt32()).ConvertTo(config.DataTimeZone, config.ExchangeTimeZone);
+            }
+
+            tradeBar.Open = csv[1].ToDecimal() * _scaleFactor;
+            tradeBar.High = csv[2].ToDecimal() * _scaleFactor;
+            tradeBar.Low = csv[3].ToDecimal() * _scaleFactor;
+            tradeBar.Close = csv[4].ToDecimal() * _scaleFactor;
+            tradeBar.Volume = csv[5].ToDecimal();
+
+            return tradeBar;
+        }
+
+        /// <summary>
+        /// Parses Future trade bar data into the specified tradebar type, useful for custom types with OHLCV data deriving from RegressionAlgorithmUSEquities
+        /// </summary>
+        /// <typeparam name="T">The requested output type, must derive from RegressionAlgorithmUSEquities</typeparam>
+        /// <param name="config">Symbols, Resolution, DataType, </param>
+        /// <param name="line">Line from the data file requested</param>
+        /// <param name="date">The base data used to compute the time of the bar since the line specifies a milliseconds since midnight</param>
+        /// <returns></returns>
+        public static T ParseFuture<T>(SubscriptionDataConfig config, string line, DateTime date)
+            where T : RegressionAlgorithmUSEquities, new()
+        {
+            var tradeBar = new T
+            {
+                Period = config.Increment,
+                Symbol = config.Symbol
+            };
+
+            var csv = line.ToCsv(6);
+            if (config.Resolution == Resolution.Daily || config.Resolution == Resolution.Hour)
+            {
+                // hourly and daily have different time format, and can use slow, robust c# parser.
+                tradeBar.Time = DateTime.ParseExact(csv[0], DateFormat.TwelveCharacter, CultureInfo.InvariantCulture).ConvertTo(config.DataTimeZone, config.ExchangeTimeZone);
+            }
+            else
+            {
+                // Using custom "ToDecimal" conversion for speed on high resolution data.
+                tradeBar.Time = date.Date.AddMilliseconds(csv[0].ToInt32()).ConvertTo(config.DataTimeZone, config.ExchangeTimeZone);
+            }
+
+            tradeBar.Open = csv[1].ToDecimal();
+            tradeBar.High = csv[2].ToDecimal();
+            tradeBar.Low = csv[3].ToDecimal();
+            tradeBar.Close = csv[4].ToDecimal();
+            tradeBar.Volume = csv[5].ToDecimal();
+
+            return tradeBar;
+        }
+
+
+        /// <summary>
+        /// Parses Option trade bar data into the specified tradebar type, useful for custom types with OHLCV data deriving from RegressionAlgorithmUSEquities
+        /// </summary>
+        /// <param name="config">Symbols, Resolution, DataType, </param>
+        /// <param name="line">Line from the data file requested</param>
+        /// <param name="date">The base data used to compute the time of the bar since the line specifies a milliseconds since midnight</param>
+        /// <returns></returns>
+        public static RegressionAlgorithmUSEquities ParseOption(SubscriptionDataConfig config, string line, DateTime date)
+        {
+            return ParseOption<RegressionAlgorithmUSEquities>(config, line, date);
+        }
+
+
+        /// <summary>
+        /// Parses Future trade bar data into the specified tradebar type, useful for custom types with OHLCV data deriving from RegressionAlgorithmUSEquities
+        /// </summary>
+        /// <param name="config">Symbols, Resolution, DataType, </param>
+        /// <param name="line">Line from the data file requested</param>
+        /// <param name="date">The base data used to compute the time of the bar since the line specifies a milliseconds since midnight</param>
+        /// <returns></returns>
+        public static RegressionAlgorithmUSEquities ParseFuture(SubscriptionDataConfig config, string line, DateTime date)
+        {
+            return ParseFuture<RegressionAlgorithmUSEquities>(config, line, date);
+        }
+
+        /// <summary>
+        /// Update the tradebar - build the bar from this pricing information:
+        /// </summary>
+        /// <param name="lastTrade">This trade price</param>
+        /// <param name="bidPrice">Current bid price (not used) </param>
+        /// <param name="askPrice">Current asking price (not used) </param>
+        /// <param name="volume">Volume of this trade</param>
+        /// <param name="bidSize">The size of the current bid, if available</param>
+        /// <param name="askSize">The size of the current ask, if available</param>
+        public override void Update(decimal lastTrade, decimal bidPrice, decimal askPrice, decimal volume, decimal bidSize, decimal askSize)
+        {
+            Initialize(lastTrade);
+            if (lastTrade > High) High = lastTrade;
+            if (lastTrade < Low) Low = lastTrade;
+            //Volume is the total summed volume of trades in this bar:
+            Volume += volume;
+            //Always set the closing price;
+            Close = lastTrade;
+        }
+
+        /// <summary>
+        /// Return a new instance clone of this object, used in fill forward
+        /// </summary>
+        /// <param name="fillForward">True if this is a fill forward clone</param>
+        /// <returns>A clone of the current object</returns>
+        public override BaseData Clone(bool fillForward)
+        {
+            var clone = base.Clone(fillForward);
+
+            if (fillForward)
+            {
+                // zero volume out, since it would skew calculations in volume-based indicators
+                ((RegressionAlgorithmUSEquities)clone).Volume = 0;
+            }
+
+            return clone;
+        }
+
+        /// <summary>
+        /// Return a new instance clone of this object
+        /// </summary>
+        public override BaseData Clone()
+        {
+            return (BaseData)MemberwiseClone();
+        }
+
+        /// <summary>
+        /// Initializes this bar with a first data point
+        /// </summary>
+        /// <param name="value">The seed value for this bar</param>
+        private void Initialize(decimal value)
+        {
+            if (Interlocked.CompareExchange(ref _initialized, 1, 0) == 0)
+            {
+                _open = value;
+                _low = value;
+                _high = value;
+            }
+        }
+        
+        /// <summary>
+        /// Gets the source of data for the custom data type
+        /// </summary>
+        /// <param name="config">Configuration parameters</param>
+        /// <param name="date">Date of data</param>
+        /// <param name="isLiveMode">Is live mode</param>
+        /// <returns></returns>
         public override SubscriptionDataSource GetSource(SubscriptionDataConfig config, DateTime date, bool isLiveMode)
         {
             if (isLiveMode)
@@ -136,7 +597,15 @@ namespace QuantConnect.Data.Custom
             }
             return new SubscriptionDataSource(source, SubscriptionTransportMedium.LocalFile, FileFormat.Csv);
         }
-
+        
+        /// <summary>
+        /// Parses and converts each line of data into a BaseData instance
+        /// </summary>
+        /// <param name="config">Configuration parameters</param>
+        /// <param name="line">Line of data</param>
+        /// <param name="date">Date of the data</param>
+        /// <param name="isLiveMode">Is live mode</param>
+        /// <returns></returns>
         public override BaseData Reader(SubscriptionDataConfig config, string line, DateTime date, bool isLiveMode)
         {
             //Handle end of file:
@@ -158,52 +627,6 @@ namespace QuantConnect.Data.Custom
             {
                 // if we couldn't parse it above return a default instance
                 return new RegressionAlgorithmUSEquities { Symbol = config.Symbol, Period = config.Increment };
-            }
-        }
-
-        /// <summary>
-        /// Helper method to create a new equity based off data passed to the <see cref="Reader"/>
-        /// </summary>
-        /// <param name="config">Subscription configuration</param>
-        /// <param name="line">Line of csv data</param>
-        /// <param name="date">Date of the requested data</param>
-        /// <returns><see cref="RegressionAlgorithmUSEquities"/> instance</returns>
-        private RegressionAlgorithmUSEquities ParseEquity(SubscriptionDataConfig config, string line, DateTime date)
-        {
-            var testEquity = new RegressionAlgorithmUSEquities();
-
-            var csv = line.ToCsv(6);
-            if (config.Resolution == Resolution.Daily || config.Resolution == Resolution.Hour)
-            {
-                // hourly and daily have different time format, and can use slow, robust c# parser.
-                testEquity.Time = DateTime.ParseExact(csv[0], DateFormat.TwelveCharacter, CultureInfo.InvariantCulture).ConvertTo(config.DataTimeZone, config.ExchangeTimeZone);
-            }
-            else
-            {
-                // Using custom "ToDecimal" conversion for speed on high resolution data.
-                testEquity.Time = date.Date.AddMilliseconds(csv[0].ToInt32()).ConvertTo(config.DataTimeZone, config.ExchangeTimeZone);
-            }
-
-            testEquity.Open = csv[1].ToDecimal() * _scaleFactor;
-            testEquity.High = csv[2].ToDecimal() * _scaleFactor;
-            testEquity.Low = csv[3].ToDecimal() * _scaleFactor;
-            testEquity.Close = csv[4].ToDecimal() * _scaleFactor;
-            testEquity.Volume = csv[5].ToDecimal();
-
-            return testEquity;
-        }
-
-        /// <summary>
-        /// Initializes this bar with a first data point
-        /// </summary>
-        /// <param name="value">The seed value for this bar</param>
-        private void Initialize(decimal value)
-        {
-            if (Interlocked.CompareExchange(ref _initialized, 1, 0) == 0)
-            {
-                _open = value;
-                _low = value;
-                _high = value;
             }
         }
     }

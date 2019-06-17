@@ -62,7 +62,16 @@ namespace QuantConnect.Securities
         /// <returns>The configure exchange hours for the specified configuration</returns>
         public SecurityExchangeHours GetExchangeHours(SubscriptionDataConfig configuration)
         {
-            return GetExchangeHours(configuration.Market, configuration.Symbol, configuration.SecurityType);
+            // We need to be able to properly load equity hours for custom data if it has support for mapping
+            var securityType = configuration.SecurityType;
+
+            // Don't convert Option's SecurityType value
+            if (configuration.UsesMapFiles && configuration.SecurityType != SecurityType.Option)
+            {
+                securityType = SecurityType.Equity;
+            }
+
+            return GetExchangeHours(configuration.Market, configuration.Symbol, securityType);
         }
 
         /// <summary>
