@@ -209,7 +209,7 @@ namespace QuantConnect.Data
             IsFilteredSubscription = isFilteredSubscription;
             Consolidators = new HashSet<IDataConsolidator>();
             DataNormalizationMode = dataNormalizationMode;
-            UsesMapFiles = SecurityType == SecurityType.Equity || MapFileTypes.Contains(Type);
+            UsesMapFiles = SecurityType == SecurityType.Equity || SecurityType == SecurityType.Option || MapFileTypes.Contains(Type);
 
             TickType = tickType ?? LeanData.GetCommonTickTypeForCommonDataTypes(objectType, SecurityType);
 

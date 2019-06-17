@@ -231,23 +231,26 @@ namespace QuantConnect.Lean.Engine.DataFeeds
                     // only take the resolved map file if it has data, otherwise we'll use the empty one we defined above
                     if (mapFile.Any()) _mapFile = mapFile;
 
-                    var factorFile = _factorFileProvider.Get(_config.Symbol);
-                    _hasScaleFactors = factorFile != null;
-                    if (_hasScaleFactors)
+                    if (!_config.IsCustomData)
                     {
-                        _factorFile = factorFile;
-
-                        // if factor file has minimum date, update start period if before minimum date
-                        if (!_isLiveMode && _factorFile != null && _factorFile.FactorFileMinimumDate.HasValue)
+                        var factorFile = _factorFileProvider.Get(_config.Symbol);
+                        _hasScaleFactors = factorFile != null;
+                        if (_hasScaleFactors)
                         {
-                            if (_periodStart < _factorFile.FactorFileMinimumDate.Value)
-                            {
-                                _periodStart = _factorFile.FactorFileMinimumDate.Value;
+                            _factorFile = factorFile;
 
-                                OnNumericalPrecisionLimited(
-                                    new NumericalPrecisionLimitedEventArgs(
-                                        $"Data for symbol {_config.Symbol.Value} has been limited due to numerical precision issues in the factor file. " +
-                                        $"The starting date has been set to {_factorFile.FactorFileMinimumDate.Value.ToShortDateString()}."));
+                            // if factor file has minimum date, update start period if before minimum date
+                            if (!_isLiveMode && _factorFile != null && _factorFile.FactorFileMinimumDate.HasValue)
+                            {
+                                if (_periodStart < _factorFile.FactorFileMinimumDate.Value)
+                                {
+                                    _periodStart = _factorFile.FactorFileMinimumDate.Value;
+
+                                    OnNumericalPrecisionLimited(
+                                        new NumericalPrecisionLimitedEventArgs(
+                                            $"Data for symbol {_config.Symbol.Value} has been limited due to numerical precision issues in the factor file. " +
+                                            $"The starting date has been set to {_factorFile.FactorFileMinimumDate.Value.ToShortDateString()}."));
+                                }
                             }
                         }
                     }
