@@ -15,10 +15,10 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using QuantConnect.Data;
 using QuantConnect.Data.Custom;
 using QuantConnect.Interfaces;
+using QuantConnect.Orders.Fees;
 
 namespace QuantConnect.Algorithm.CSharp
 {
@@ -46,10 +46,12 @@ namespace QuantConnect.Algorithm.CSharp
             SetStartDate(_startDate.Year, _startDate.Month, _startDate.Day);
             SetEndDate(_endDate.Year, _endDate.Month, _endDate.Day);
             SetCash(100000);
+            SetBrokerageModel(Brokerages.BrokerageName.Default, AccountType.Cash);
+
 
             // KORS renamed to CPRI on 2019-01-02
-            _symbol = AddData<RegressionAlgorithmUSEquities>(Ticker, Resolution.Daily).Symbol;
-            //_symbol = AddEquity(Ticker, Resolution.Daily).Symbol;
+            _symbol = AddData<RegressionAlgorithmUSEquities>(Ticker, Resolution.Daily, false, leverage: 2.0m).Symbol;
+            Securities[_symbol].FeeModel = new ConstantFeeModel(1.00m);
         }
         
         /// <summary>
@@ -63,8 +65,6 @@ namespace QuantConnect.Algorithm.CSharp
             {
                 _actualStartDate = Time;
             }
-
-            Log($"{Time:yyyy-MM-dd HH:mm:ss} - Price: {Securities[_symbol].Price}");
 
             // Don't process the initial rename event
             if (slice.SymbolChangedEvents.ContainsKey(_symbol) && _actualStartDate != Time)
@@ -109,22 +109,22 @@ namespace QuantConnect.Algorithm.CSharp
             {"Total Trades", "1"},
             {"Average Win", "0%"},
             {"Average Loss", "0%"},
-            {"Compounding Annual Return", "-10.401%"},
-            {"Drawdown", "34.800%"},
+            {"Compounding Annual Return", "-9.936%"},
+            {"Drawdown", "34.600%"},
             {"Expectancy", "0"},
-            {"Net Profit", "-14.354%"},
-            {"Sharpe Ratio", "-0.375"},
+            {"Net Profit", "-13.751%"},
+            {"Sharpe Ratio", "-0.353"},
             {"Loss Rate", "0%"},
             {"Win Rate", "0%"},
             {"Profit-Loss Ratio", "0"},
-            {"Alpha", "0.097"},
-            {"Beta", "-9.101"},
-            {"Annual Standard Deviation", "0.225"},
+            {"Alpha", "0.105"},
+            {"Beta", "-9.249"},
+            {"Annual Standard Deviation", "0.224"},
             {"Annual Variance", "0.05"},
-            {"Information Ratio", "-0.463"},
-            {"Tracking Error", "0.225"},
+            {"Information Ratio", "-0.442"},
+            {"Tracking Error", "0.224"},
             {"Treynor Ratio", "0.009"},
-            {"Total Fees", "$0.00"},
+            {"Total Fees", "$1.00"},
         };
     }
 }
