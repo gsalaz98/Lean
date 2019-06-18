@@ -71,21 +71,21 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
                 throw new ArgumentException("The starting date can only be at most 15 days from now");
             }
 
-            var startDateEasternStandard = startDateUtc.ConvertFromUtc(TimeZones.EasternStandard);
-            var endDateEasternStandard = endDateUtc.ConvertFromUtc(TimeZones.EasternStandard);
+            Directory.CreateDirectory(_rawDataDestination);
             var now = DateTime.UtcNow;
 
-            Directory.CreateDirectory(_rawDataDestination);
-            
             // Makes sure we only get final, non-changing data by checking if the current hour matches the hour of the upper date bound.
             if (new DateTime(now.Year, now.Month, now.Day, now.Hour, 0, 0) == new DateTime(endDateUtc.Year, endDateUtc.Month, endDateUtc.Day, endDateUtc.Hour, 0, 0))
             {
-                endDateEasternStandard = endDateEasternStandard.AddHours(-1);
+                endDateUtc = endDateUtc.AddHours(-1);
             }
             
             // PsychSignal paginates data by hour
-            for (; startDateEasternStandard < endDateEasternStandard; startDateEasternStandard = startDateEasternStandard.AddHours(1), startDateUtc = startDateUtc.AddHours(1))
+            for (; startDateUtc < endDateUtc; startDateUtc = startDateUtc.AddHours(1))
             {
+                var startDateNewYork = startDateUtc.ConvertFromUtc(TimeZones.NewYork);
+                var endDateNewYork = endDateUtc.ConvertFromUtc(TimeZones.NewYork);
+
                 var rawDataPath = Path.Combine(_rawDataDestination, $"{startDateUtc:yyyyMMdd_HH}_{_dataSource}.csv");
                 var rawDataPathTemp = $"{rawDataPath}.tmp";
                 
@@ -105,8 +105,9 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
                     {
                         using (var client = new WebClient())
                         {
-                            client.DownloadFile($"{_baseUrl}/replay?apikey={_apiKey}&update=1m&sources={_dataSource}&from={startDateEasternStandard:yyyyMMddHH}&format=csv", rawDataPathTemp);
+                            client.DownloadFile($"{_baseUrl}/replay?apikey={_apiKey}&update=1m&sources={_dataSource}&from={startDateNewYork:yyyyMMddHH}&format=csv", rawDataPathTemp);
                             File.Move(rawDataPathTemp, rawDataPath);
+                            Log.Trace($"PsychSignalDataDownloader.Download(): Successfully downloaded file: {rawDataPath}");
                             break;
                         }
                     }
@@ -116,7 +117,7 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
 
                         if (retries == MaxRetries - 1)
                         {
-                            Log.Error($"PsychSignalDataDownloader.Download(): We've reached the maximum number of retries for date {startDateEasternStandard:yyyy-MM-dd HH:00:00}");
+                            Log.Error($"PsychSignalDataDownloader.Download(): We've reached the maximum number of retries for date {startDateNewYork:yyyy-MM-dd HH:00:00}");
                             continue;
                         }
                         if (response == null)
