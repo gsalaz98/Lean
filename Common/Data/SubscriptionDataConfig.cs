@@ -119,7 +119,7 @@ namespace QuantConnect.Data
         /// Some custom data sources should support symbol mapping because the custom data
         /// is directly related to symbols/tickers. For example, SEC data and sentiment data on US equities.
         /// </summary>
-        public static readonly HashSet<Type> MapFileTypes = new HashSet<Type>
+        public static HashSet<Type> MapFileTypes = new HashSet<Type>
         {
             typeof(TiingoDailyData),
             typeof(Quandl),
