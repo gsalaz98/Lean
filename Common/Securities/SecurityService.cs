@@ -60,15 +60,7 @@ namespace QuantConnect.Securities
             var configList = new SubscriptionDataConfigList(symbol);
             configList.AddRange(subscriptionDataConfigList);
 
-            SecurityExchangeHours exchangeHours;
-            if (symbol.ID.SecurityType == SecurityType.Base && configList.Any(x => x.UsesMapFiles))
-            {
-                exchangeHours = _marketHoursDatabase.GetEntry(symbol.ID.Market, symbol, SecurityType.Equity).ExchangeHours;
-            }
-            else
-            {
-                exchangeHours = _marketHoursDatabase.GetEntry(symbol.ID.Market, symbol, symbol.ID.SecurityType).ExchangeHours;
-            }
+            var exchangeHours = _marketHoursDatabase.GetEntry(symbol.ID.Market, symbol, symbol.ID.SecurityType).ExchangeHours;
 
             var defaultQuoteCurrency = _cashBook.AccountCurrency;
             if (symbol.ID.SecurityType == SecurityType.Forex)

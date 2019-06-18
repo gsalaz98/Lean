@@ -16,7 +16,7 @@
 using System;
 using System.Collections.Generic;
 using QuantConnect.Data;
-using QuantConnect.Data.Custom;
+using QuantConnect.Data.Custom.SEC;
 using QuantConnect.Interfaces;
 using QuantConnect.Orders.Fees;
 
@@ -25,10 +25,20 @@ namespace QuantConnect.Algorithm.CSharp
     /// <summary>
     /// Regression algorithm demonstrating use of map files with custom data
     /// </summary>
+    /// <meta name="tag" content="using data" />
+    /// <meta name="tag" content="custom data" />
+    /// <meta name="tag" content="regression test" />
+    /// <meta name="tag" content="SEC" />
+    /// <meta name="tag" content="rename event" />
+    /// <meta name="tag" content="map" />
+    /// <meta name="tag" content="mapping" />
+    /// <meta name="tag" content="map files" />
     public class CustomDataUsingMapFileRegressionAlgorithm: QCAlgorithm, IRegressionAlgorithmDefinition
     {
         private Symbol _symbol;
         private bool _changedSymbol;
+        private string _oldSymbol;
+        private string _currentSymbol;
         private DateTime _actualStartDate = default(DateTime);
         private DateTime _startDate = new DateTime(2018, 1, 1);
         private DateTime _endDate = new DateTime(2019, 5, 31);
@@ -50,7 +60,7 @@ namespace QuantConnect.Algorithm.CSharp
 
 
             // KORS renamed to CPRI on 2019-01-02
-            _symbol = AddData<RegressionAlgorithmUSEquities>(Ticker, Resolution.Daily, false, leverage: 2.0m).Symbol;
+            _symbol = AddData<SECReport8K>(Ticker, Resolution.Daily, false, leverage: 2.0m).Symbol;
             Securities[_symbol].FeeModel = new ConstantFeeModel(1.00m);
         }
         
@@ -60,23 +70,28 @@ namespace QuantConnect.Algorithm.CSharp
         /// <param name="slice"></param>
         public override void OnData(Slice slice)
         {
-            // On the initial piece of data, we receive a rename event mapping the current symbol to the oldest ticker.
+            // On the initial piece of data, we receive a rename event mapping the current symbol to the oldest known ticker.
             if (_actualStartDate == default(DateTime))
             {
+                Log($"Renamed ticker {Ticker} to oldest ticker name found: {slice.SymbolChangedEvents[_symbol].OldSymbol}");
                 _actualStartDate = Time;
             }
 
             // Don't process the initial rename event
             if (slice.SymbolChangedEvents.ContainsKey(_symbol) && _actualStartDate != Time)
             {
-                Log($"{Time:yyyy-MM-dd HH:mm:ss} - Ticker changed from: {slice.SymbolChangedEvents[_symbol].OldSymbol} to {slice.SymbolChangedEvents[_symbol].NewSymbol}");
                 _changedSymbol = true;
+                _currentSymbol = slice.SymbolChangedEvents[_symbol].NewSymbol;
+                _oldSymbol = slice.SymbolChangedEvents[_symbol].OldSymbol;
 
-                if (!Portfolio.Invested)
-                {
-                    SetHoldings(_symbol, 1.0m);
-                    Log($"Bought {_symbol.Value} at {Time}");
-                }
+                Log($"{Time:yyyy-MM-dd HH:mm:ss} - Ticker changed from: {slice.SymbolChangedEvents[_symbol].OldSymbol} to {slice.SymbolChangedEvents[_symbol].NewSymbol}");
+
+            }
+
+            if (!Portfolio.Invested && _currentSymbol == Ticker)
+            {
+                SetHoldings(_symbol, 1.0m);
+                Log($"Bought {_symbol.Value} at {Time}");
             }
         }
         

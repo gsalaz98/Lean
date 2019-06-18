@@ -90,7 +90,7 @@ namespace QuantConnect.Lean.Engine.DataFeeds.Enumerators.Factories
         private string GetMappedSymbol(SubscriptionRequest request, DateTime date)
         {
             var config = request.Configuration;
-            if (config.UsesMapFiles || config.Symbol.ID.SecurityType == SecurityType.Option)
+            if (config.UsesMapFiles)
             {
                 var mapFile = config.Symbol.HasUnderlying ?
                         _mapFileResolver.ResolveMapFile(config.Symbol.Underlying.ID.Symbol, config.Symbol.Underlying.ID.Date) :

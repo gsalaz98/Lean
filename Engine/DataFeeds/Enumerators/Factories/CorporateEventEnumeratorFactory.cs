@@ -80,12 +80,12 @@ namespace QuantConnect.Lean.Engine.DataFeeds.Enumerators.Factories
             MapFileResolver mapFileResolver)
         {
             var mapFileToUse = new MapFile(config.Symbol.Value, new List<MapFileRow>());
-            var isOption = config.SecurityType == SecurityType.Option;
-            var symbol = isOption ? config.Symbol.Underlying.ID.Symbol : config.Symbol.ID.Symbol;
-            var date = isOption ? config.Symbol.Underlying.ID.Date : config.Symbol.ID.Date; 
+            var hasUnderlying = config.Symbol.HasUnderlying;
+            var symbol = hasUnderlying ? config.Symbol.Underlying.ID.Symbol : config.Symbol.ID.Symbol;
+            var date = hasUnderlying ? config.Symbol.Underlying.ID.Date : config.Symbol.ID.Date; 
 
             // load up the map and factor files for equities, options, and custom data
-            if (config.UsesMapFiles || isOption)
+            if (config.UsesMapFiles)
             {
                 try
                 {

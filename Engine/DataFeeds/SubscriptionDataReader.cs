@@ -227,7 +227,7 @@ namespace QuantConnect.Lean.Engine.DataFeeds
 
             // load up the map files for equities, options, and custom data if it supports it.
             // Only load up factor files for equities
-            if (_config.UsesMapFiles || _config.SecurityType == SecurityType.Option)
+            if (_config.UsesMapFiles)
             {
                 try
                 {

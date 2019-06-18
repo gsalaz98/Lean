@@ -20,6 +20,7 @@ using System.Runtime.CompilerServices;
 using NodaTime;
 using QuantConnect.Data.Consolidators;
 using QuantConnect.Data.Custom;
+using QuantConnect.Data.Custom.SEC;
 using QuantConnect.Data.Custom.Tiingo;
 using QuantConnect.Securities;
 using QuantConnect.Util;
@@ -123,9 +124,9 @@ namespace QuantConnect.Data
         {
             typeof(TiingoDailyData),
             typeof(Quandl),
-            
-            // Only for regression algorithm test
-            typeof(RegressionAlgorithmUSEquities)
+            typeof(SECReport8K),
+            typeof(SECReport10K),
+            typeof(SECReport10Q),
         };
         
         /// <summary>
@@ -209,7 +210,7 @@ namespace QuantConnect.Data
             IsFilteredSubscription = isFilteredSubscription;
             Consolidators = new HashSet<IDataConsolidator>();
             DataNormalizationMode = dataNormalizationMode;
-            UsesMapFiles = SecurityType == SecurityType.Equity || MapFileTypes.Contains(Type);
+            UsesMapFiles = SecurityType == SecurityType.Equity || SecurityType == SecurityType.Option || MapFileTypes.Contains(Type);
 
             TickType = tickType ?? LeanData.GetCommonTickTypeForCommonDataTypes(objectType, SecurityType);
 
