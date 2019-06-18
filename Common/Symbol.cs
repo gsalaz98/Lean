@@ -50,7 +50,7 @@ namespace QuantConnect
             switch (securityType)
             {
                 case SecurityType.Base:
-                    sid = SecurityIdentifier.GenerateBase(ticker, market, true);
+                    sid = SecurityIdentifier.GenerateBase(ticker, market);
                     break;
 
                 case SecurityType.Equity:
