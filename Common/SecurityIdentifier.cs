@@ -417,6 +417,63 @@ namespace QuantConnect
         }
 
         /// <summary>
+        /// Generates a new <see cref="SecurityIdentifier"/> for a custom security
+        /// </summary>
+        /// <param name="symbol">The ticker symbol of this security</param>
+        /// <param name="market">The security's market</param>
+        /// <returns>A new <see cref="SecurityIdentifier"/> representing the specified base security</returns>
+        public static SecurityIdentifier GenerateBase(DateTime date, string symbol, string market)
+        {
+            return Generate(date, symbol, SecurityType.Base, market);
+        }
+
+        /// <summary>
+        /// Helper overload that will search the mapfiles to resolve the first date. This implementation
+        /// uses the configured <see cref="IMapFileProvider"/> via the <see cref="Composer.Instance"/>
+        /// </summary>
+        /// <param name="symbol">The symbol as it is known today</param>
+        /// <param name="market">The market</param>
+        /// <param name="mapSymbol">Specifies if symbol should be mapped using map file provider</param>
+        /// <param name="mapFileProvider">Specifies the IMapFileProvider to use for resolving symbols, specify null to load from Composer</param>
+        /// <returns>A new <see cref="SecurityIdentifier"/> representing the specified symbol today</returns>
+        public static SecurityIdentifier GenerateBase(string symbol, string market, bool mapSymbol = true, IMapFileProvider mapFileProvider = null)
+        {
+            if (mapSymbol)
+            {
+                MapFile mapFile;
+                if (mapFileProvider == null)
+                {
+                    lock (_mapFileProviderLock)
+                    {
+                        if (_mapFileProvider == null)
+                        {
+                            _mapFileProvider = Composer.Instance.GetExportedValueByTypeName<IMapFileProvider>(MapFileProviderTypeName);
+                        }
+
+                        mapFile = GetMapFile(_mapFileProvider, market, symbol);
+                    }
+                }
+                else
+                {
+                    mapFile = GetMapFile(mapFileProvider, market, symbol);
+                }
+
+                var firstDate = mapFile.FirstDate;
+                if (mapFile.Any())
+                {
+                    symbol = mapFile.FirstTicker;
+                }
+
+                return GenerateBase(firstDate, symbol, market);
+            }
+            else
+            {
+                return GenerateBase(symbol, market);
+            }
+
+        }
+
+        /// <summary>
         /// Generates a new <see cref="SecurityIdentifier"/> for a forex pair
         /// </summary>
         /// <param name="symbol">The currency pair in the format similar to: 'EURUSD'</param>

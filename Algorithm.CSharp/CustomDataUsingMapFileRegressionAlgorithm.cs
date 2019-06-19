@@ -37,31 +37,24 @@ namespace QuantConnect.Algorithm.CSharp
     {
         private Symbol _symbol;
         private bool _changedSymbol;
-        private string _oldSymbol;
-        private string _currentSymbol;
         private DateTime _actualStartDate = default(DateTime);
-        private DateTime _startDate = new DateTime(2018, 1, 1);
-        private DateTime _endDate = new DateTime(2019, 5, 31);
 
         /// <summary>
         /// Ticker we use for testing
         /// </summary>
-        public const string Ticker = "CPRI";
+        public const string Ticker = "TWX";
 
         /// <summary>
         /// Initialise the data and resolution required, as well as the cash and start-end dates for your algorithm. All algorithms must initialized.
         /// </summary>
         public override void Initialize()
         {
-            SetStartDate(_startDate.Year, _startDate.Month, _startDate.Day);
-            SetEndDate(_endDate.Year, _endDate.Month, _endDate.Day);
+            SetStartDate(2001, 1, 1);
+            SetEndDate(2003, 12, 31);
             SetCash(100000);
-            SetBrokerageModel(Brokerages.BrokerageName.Default, AccountType.Cash);
 
-
-            // KORS renamed to CPRI on 2019-01-02
+            // AOL renames to TWX in 2003
             _symbol = AddData<SECReport8K>(Ticker, Resolution.Daily, false, leverage: 2.0m).Symbol;
-            Securities[_symbol].FeeModel = new ConstantFeeModel(1.00m);
         }
         
         /// <summary>
@@ -70,28 +63,10 @@ namespace QuantConnect.Algorithm.CSharp
         /// <param name="slice"></param>
         public override void OnData(Slice slice)
         {
-            // On the initial piece of data, we receive a rename event mapping the current symbol to the oldest known ticker.
-            if (_actualStartDate == default(DateTime))
-            {
-                Log($"Renamed ticker {Ticker} to oldest ticker name found: {slice.SymbolChangedEvents[_symbol].OldSymbol}");
-                _actualStartDate = Time;
-            }
-
-            // Don't process the initial rename event
-            if (slice.SymbolChangedEvents.ContainsKey(_symbol) && _actualStartDate != Time)
+            if (slice.SymbolChangedEvents.ContainsKey(_symbol) && slice.SymbolChangedEvents[_symbol].OldSymbol != Ticker)
             {
                 _changedSymbol = true;
-                _currentSymbol = slice.SymbolChangedEvents[_symbol].NewSymbol;
-                _oldSymbol = slice.SymbolChangedEvents[_symbol].OldSymbol;
-
                 Log($"{Time:yyyy-MM-dd HH:mm:ss} - Ticker changed from: {slice.SymbolChangedEvents[_symbol].OldSymbol} to {slice.SymbolChangedEvents[_symbol].NewSymbol}");
-
-            }
-
-            if (!Portfolio.Invested && _currentSymbol == Ticker)
-            {
-                SetHoldings(_symbol, 1.0m);
-                Log($"Bought {_symbol.Value} at {Time}");
             }
         }
         
@@ -109,7 +84,7 @@ namespace QuantConnect.Algorithm.CSharp
         /// <summary>
         /// This is used by the regression test system to indicate if the open source Lean repository has the required data to run this algorithm.
         /// </summary>
-        public bool CanRunLocally { get; } = false;
+        public bool CanRunLocally { get; } = true;
 
         /// <summary>
         /// This is used by the regression test system to indicate which languages this algorithm is written in.
@@ -121,25 +96,25 @@ namespace QuantConnect.Algorithm.CSharp
         /// </summary>
         public Dictionary<string, string> ExpectedStatistics => new Dictionary<string, string>
         {
-            {"Total Trades", "1"},
+            {"Total Trades", "0"},
             {"Average Win", "0%"},
             {"Average Loss", "0%"},
-            {"Compounding Annual Return", "-9.936%"},
-            {"Drawdown", "34.600%"},
+            {"Compounding Annual Return", "0%"},
+            {"Drawdown", "0%"},
             {"Expectancy", "0"},
-            {"Net Profit", "-13.751%"},
-            {"Sharpe Ratio", "-0.353"},
+            {"Net Profit", "0%"},
+            {"Sharpe Ratio", "0"},
             {"Loss Rate", "0%"},
             {"Win Rate", "0%"},
             {"Profit-Loss Ratio", "0"},
-            {"Alpha", "0.105"},
-            {"Beta", "-9.249"},
-            {"Annual Standard Deviation", "0.224"},
-            {"Annual Variance", "0.05"},
-            {"Information Ratio", "-0.442"},
-            {"Tracking Error", "0.224"},
-            {"Treynor Ratio", "0.009"},
-            {"Total Fees", "$1.00"},
+            {"Alpha", "0"},
+            {"Beta", "0"},
+            {"Annual Standard Deviation", "0"},
+            {"Annual Variance", "0"},
+            {"Information Ratio", "0"},
+            {"Tracking Error", "0"},
+            {"Treynor Ratio", "0"},
+            {"Total Fees", "$0.00"},
         };
     }
 }
