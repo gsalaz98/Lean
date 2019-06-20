@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Newtonsoft.Json;
 using NUnit.Framework;
+using QuantConnect.Data;
 
 namespace QuantConnect.Tests.Common.Securities
 {
@@ -111,9 +112,14 @@ namespace QuantConnect.Tests.Common.Securities
         [Test]
         public void Generates12Character()
         {
-            var sid1 = SecurityIdentifier.GenerateBase("123456789012", Market.USA);
-            Assert.AreEqual("123456789012", sid1.Symbol);
+            var sid1 = SecurityIdentifier.GenerateBase<BaseData>("123456789012", Market.USA);
+            Assert.AreEqual("123456789012$QUANTCONNECT.DATA.BASEDATA", sid1.Symbol);
+
+            var sid2 = SecurityIdentifier.GenerateBase(typeof(BaseData), "123456789012", Market.USA);
+            Assert.AreEqual("123456789012$QUANTCONNECT.DATA.BASEDATA", sid2.Symbol);
+
             Console.WriteLine(sid1);
+            Console.WriteLine(sid2);
         }
 
         [Test]

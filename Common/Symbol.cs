@@ -16,6 +16,7 @@
 
 using System;
 using Newtonsoft.Json;
+using QuantConnect.Data;
 
 namespace QuantConnect
 {
@@ -50,7 +51,7 @@ namespace QuantConnect
             switch (securityType)
             {
                 case SecurityType.Base:
-                    sid = SecurityIdentifier.GenerateBase(ticker, market);
+                    sid = SecurityIdentifier.GenerateBase<BaseData>(ticker, market);
                     break;
 
                 case SecurityType.Equity:

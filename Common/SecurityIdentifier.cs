@@ -409,10 +409,23 @@ namespace QuantConnect
         /// </summary>
         /// <param name="symbol">The ticker symbol of this security</param>
         /// <param name="market">The security's market</param>
+        /// <typeparam name="T">BaseData type used to distinguish this security from other custom data sources</typeparam>
         /// <returns>A new <see cref="SecurityIdentifier"/> representing the specified base security</returns>
-        public static SecurityIdentifier GenerateBase(string symbol, string market)
+        public static SecurityIdentifier GenerateBase<T>(string symbol, string market)
         {
-            return Generate(DefaultDate, symbol, SecurityType.Base, market);
+            return Generate(DefaultDate, $"{symbol}${typeof(T).FullName}", SecurityType.Base, market);
+        }
+        
+        /// <summary>
+        /// Generates a new SecurityIdentifier from a Type object.
+        /// </summary>
+        /// <param name="dataType">Type of data</param>
+        /// <param name="symbol">The ticker symbol of this security</param>
+        /// <param name="market">The security's maaraket</param>
+        /// <returns>A new <see cref="SecurityIdentifier"/> representing the specified base security</returns>
+        public static SecurityIdentifier GenerateBase(Type dataType, string symbol, string market)
+        {
+            return Generate(DefaultDate, $"{symbol}${dataType.FullName}", SecurityType.Base, market);
         }
 
         /// <summary>

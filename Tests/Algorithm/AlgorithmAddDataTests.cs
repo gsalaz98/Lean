@@ -26,6 +26,7 @@ using QuantConnect.Data;
 using QuantConnect.Data.Auxiliary;
 using QuantConnect.Data.Consolidators;
 using QuantConnect.Data.Custom;
+using QuantConnect.Data.Custom.SEC;
 using QuantConnect.Data.Market;
 using QuantConnect.Lean.Engine.DataFeeds;
 using QuantConnect.Securities;
@@ -122,6 +123,23 @@ namespace QuantConnect.Tests.Algorithm
             qcAlgorithm.AddData<Quandl>("EURCAD");
             var quandlSubscription = qcAlgorithm.SubscriptionManager.Subscriptions.FirstOrDefault(x => x.Type == typeof(Quandl));
             Assert.AreEqual(quandlSubscription.Type, typeof(Quandl));
+        }
+
+        [Test]
+        public void MultipleCustomDataSources_SymbolsDoNotCollideWithSameTicker()
+        {
+            var qcAlgorithm = new QCAlgorithm();
+            qcAlgorithm.SubscriptionManager.SetDataManager(new DataManagerStub(qcAlgorithm, new MockDataFeed()));
+
+            var symbol_generic_1 = qcAlgorithm.AddData<SECReport8K>("TWX").Symbol;
+            var symbol_generic_2 = qcAlgorithm.AddData<SECReport10K>("TWX").Symbol;
+
+            Assert.False(symbol_generic_1 == symbol_generic_2);
+
+            var symbol_type_1 = qcAlgorithm.AddData(typeof(SECReport8K), "AOL", Resolution.Daily, DateTimeZone.Utc);
+            var symbol_type_2 = qcAlgorithm.AddData(typeof(SECReport10K), "AOL", Resolution.Daily, DateTimeZone.Utc);
+
+            Assert.False(symbol_type_1 == symbol_type_2);
         }
 
         [Test]

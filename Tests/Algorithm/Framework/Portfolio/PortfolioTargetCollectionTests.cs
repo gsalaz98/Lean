@@ -17,6 +17,7 @@ using System.Linq;
 using NUnit.Framework;
 using QuantConnect.Algorithm;
 using QuantConnect.Algorithm.Framework.Portfolio;
+using QuantConnect.Data;
 using QuantConnect.Data.Market;
 using QuantConnect.Orders;
 using QuantConnect.Securities;
@@ -34,7 +35,7 @@ namespace QuantConnect.Tests.Algorithm.Framework.Portfolio
         [Test]
         public void AddContainsAndRemoveWork()
         {
-            var symbol = new Symbol(SecurityIdentifier.GenerateBase(_symbol, Market.USA), _symbol);
+            var symbol = new Symbol(SecurityIdentifier.GenerateBase<BaseData>(_symbol, Market.USA), _symbol);
             var collection = new PortfolioTargetCollection();
             var target = new PortfolioTarget(symbol, 1);
             collection.Add(target);
