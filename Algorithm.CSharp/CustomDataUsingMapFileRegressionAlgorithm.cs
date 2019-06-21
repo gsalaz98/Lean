@@ -37,7 +37,6 @@ namespace QuantConnect.Algorithm.CSharp
     {
         private Symbol _symbol;
         private bool _changedSymbol;
-        private DateTime _actualStartDate = default(DateTime);
 
         /// <summary>
         /// Ticker we use for testing
@@ -54,7 +53,8 @@ namespace QuantConnect.Algorithm.CSharp
             SetCash(100000);
 
             // AOL renames to TWX in 2003
-            _symbol = AddData<SECReport8K>(Ticker, Resolution.Daily, false, leverage: 2.0m).Symbol;
+            _symbol = AddData<SECReport8K>(Ticker, Resolution.Daily).Symbol;
+            AddEquity(Ticker, Resolution.Daily);
         }
         
         /// <summary>
@@ -63,10 +63,10 @@ namespace QuantConnect.Algorithm.CSharp
         /// <param name="slice"></param>
         public override void OnData(Slice slice)
         {
-            if (slice.SymbolChangedEvents.ContainsKey(_symbol) && slice.SymbolChangedEvents[_symbol].OldSymbol != Ticker)
+            if (slice.SymbolChangedEvents.ContainsKey(_symbol))
             {
                 _changedSymbol = true;
-                Log($"{Time:yyyy-MM-dd HH:mm:ss} - Ticker changed from: {slice.SymbolChangedEvents[_symbol].OldSymbol} to {slice.SymbolChangedEvents[_symbol].NewSymbol}");
+                Log($"{Time} - Ticker changed from: {slice.SymbolChangedEvents[_symbol].OldSymbol} to {slice.SymbolChangedEvents[_symbol].NewSymbol}");
             }
         }
         

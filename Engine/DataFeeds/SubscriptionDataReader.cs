@@ -220,10 +220,6 @@ namespace QuantConnect.Lean.Engine.DataFeeds
 
             _factorFile = new FactorFile(_config.Symbol.Value, new List<FactorFileRow>());
             _mapFile = new MapFile(_config.Symbol.Value, new List<MapFileRow>());
-               
-            // Load the symbol and date to complete the mapFile checks in one statement
-            var symbol = _config.Symbol.HasUnderlying ? _config.Symbol.Underlying.ID.Symbol : _config.Symbol.ID.Symbol;
-            var date = _config.Symbol.HasUnderlying ? _config.Symbol.Underlying.ID.Date : _config.Symbol.ID.Date;
 
             // load up the map files for equities, options, and custom data if it supports it.
             // Only load up factor files for equities
@@ -231,6 +227,10 @@ namespace QuantConnect.Lean.Engine.DataFeeds
             {
                 try
                 {
+                    // Load the symbol and date to complete the mapFile checks in one statement
+                    var symbol = _config.Symbol.HasUnderlying ? _config.Symbol.Underlying.ID.Symbol : _config.Symbol.ID.Symbol;
+                    var date = _config.Symbol.HasUnderlying ? _config.Symbol.Underlying.ID.Date : _config.Symbol.ID.Date;
+
                     var mapFile = _mapFileResolver.ResolveMapFile(symbol, date);
 
                     // only take the resolved map file if it has data, otherwise we'll use the empty one we defined above
