@@ -92,7 +92,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="CloneExtensions, Version=1.3.0.0, Culture=neutral, processorArchitecture=MSIL" />
-    <Reference Include="DotNetZip, Version=1.10.1.0, Culture=neutral, PublicKeyToken=6583c7c814667745, processorArchitecture=MSIL" />
+    <Reference Include="DotNetZip, Version=1.13.3.0, Culture=neutral, PublicKeyToken=6583c7c814667745, processorArchitecture=MSIL" />
     <Reference Include="Fasterflect" />
     <Reference Include="MathNet.Numerics, Version=3.19.0.0, Culture=neutral, processorArchitecture=MSIL" />
     <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL" />
@@ -172,7 +172,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="CloneExtensions" Version="1.4.2" />
-    <PackageReference Include="DotNetZip" Version="1.10.1" />
+    <PackageReference Include="DotNetZip" Version="1.13.3" />
     <PackageReference Include="fasterflect" Version="2.1.3" />
     <PackageReference Include="MathNet.Numerics" Version="3.19.0" />
     <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />

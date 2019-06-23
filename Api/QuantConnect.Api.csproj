@@ -134,6 +134,7 @@
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>
+    <PackageReference Include="DotNetZip" Version="1.13.3" />
     <PackageReference Include="RestSharp" Version="105.2.3" />
   </ItemGroup>
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />

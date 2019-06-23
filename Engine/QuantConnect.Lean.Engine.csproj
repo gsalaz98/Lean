@@ -211,6 +211,7 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="DotNetZip" Version="1.13.3" />
     <PackageReference Include="System.Runtime.Caching" Version="4.6.0-preview4.19164.7" />
     <PackageReference Include="System.Text.Encoding.CodePages" Version="4.5.1" />
   </ItemGroup>
