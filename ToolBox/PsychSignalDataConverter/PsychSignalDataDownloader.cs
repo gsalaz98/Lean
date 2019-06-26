@@ -74,7 +74,8 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
             Directory.CreateDirectory(_rawDataDestination);
             var now = DateTime.UtcNow;
 
-            // Makes sure we only get final, non-changing data by checking if the current hour matches the hour of the upper date bound.
+            // Makes sure we only get final, non-changing data by checking if the current hour matches the 
+            // hour of the upper date bound and subtracting an hour from it if that is the case
             if (new DateTime(now.Year, now.Month, now.Day, now.Hour, 0, 0) == new DateTime(endDateUtc.Year, endDateUtc.Month, endDateUtc.Day, endDateUtc.Hour, 0, 0))
             {
                 endDateUtc = endDateUtc.AddHours(-1);
@@ -84,7 +85,7 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
             for (; startDateUtc < endDateUtc; startDateUtc = startDateUtc.AddHours(1))
             {
                 var rawDataPath = Path.Combine(_rawDataDestination, $"{startDateUtc:yyyyMMdd_HH}_{_dataSource}.csv");
-                var rawDataPathTemp = $"{rawDataPath}.tmp";
+                var rawDataPathTemp = Path.Combine(Path.GetTempPath(), $"{startDateUtc:yyyyMMdd_HH}_{_dataSource}.csv.tmp");
                 
                 // Don't download files we already have
                 if (File.Exists(rawDataPath))
@@ -96,7 +97,7 @@ namespace QuantConnect.ToolBox.PsychSignalDataConverter
                 for (var retries = 0; retries < MaxRetries; retries++)
                 {
                     // Psychsignal imposes very strict rate limits
-                    Thread.Sleep(7000);
+                    Thread.Sleep(10000);
 
                     try
                     {
