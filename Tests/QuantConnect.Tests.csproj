@@ -225,23 +225,26 @@
   <Choose>
     <When Condition="$(IsWindows) AND '$(ForceLinuxBuild)' != 'true'">
       <ItemGroup>
-        <Reference Include="Python.Runtime, Version=2.0.3, Culture=neutral, processorArchitecture=MSIL">
-          <HintPath>..\packages\pythonnetcoreclr\2.0.3\lib\win\netstandard2.0\Python.Runtime.dll</HintPath>
+        <Content Include="$(Pkgpythonnetcoreclr)\lib\win\netstandard2.0\Python.Runtime.dll">
+          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+          <CopyToPublishDirectory>Always</CopyToPublishDirectory>
         </Reference>
       </ItemGroup>
     </When>
     <When Condition="$(IsLinux) OR '$(ForceLinuxBuild)' == 'true'">
       <ItemGroup>
-        <Reference Include="Python.Runtime, Version=2.0.3, Culture=neutral, processorArchitecture=MSIL">
-          <HintPath>..\packages\pythonnetcoreclr\2.0.3\lib\linux\netstandard2.0\Python.Runtime.dll</HintPath>
-        </Reference>
+        <Content Include="$(Pkgpythonnetcoreclr)\lib\linux\netstandard2.0\Python.Runtime.dll">
+          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+          <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+        </Content>
       </ItemGroup>
     </When>
     <When Condition="$(IsOSX) AND '$(ForceLinuxBuild)' != 'true'">
       <ItemGroup>
-        <Reference Include="Python.Runtime, Version=2.0.3, Culture=neutral, processorArchitecture=MSIL">
-          <HintPath>..\packages\pythonnetcoreclr\2.0.3\lib\osx\netstandard2.0\Python.Runtime.dll</HintPath>
-        </Reference>
+        <Content Include="$(Pkgpythonnetcoreclr)\lib\osx\netstandard2.0\Python.Runtime.dll">
+          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+          <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+        </Content>
       </ItemGroup>
     </When>
   </Choose>
@@ -612,10 +615,11 @@
   <ItemGroup>
     <PackageReference Include="Moq" Version="4.7.63" />
     <PackageReference Include="NUnit" Version="2.6.4" />
+    <PackageReference Include="pythonnetcoreclr" Version="2.0.4" GeneratePathProperty="true" />
     <PackageReference Include="RestSharp" Version="105.2.3" />
   </ItemGroup>
   <ItemGroup>
-    <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
+    <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" /> 
   </ItemGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

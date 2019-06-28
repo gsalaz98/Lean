@@ -86,23 +86,26 @@
   <Choose>
     <When Condition="$(IsWindows) AND '$(ForceLinuxBuild)' != 'true'">
       <ItemGroup>
-        <Reference Include="Python.Runtime, Version=2.0.3, Culture=neutral, processorArchitecture=MSIL">
-          <HintPath>..\packages\pythonnetcoreclr\2.0.3\lib\win\netstandard2.0\Python.Runtime.dll</HintPath>
+        <Content Include="$(Pkgpythonnetcoreclr)\lib\win\netstandard2.0\Python.Runtime.dll">
+          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+          <CopyToPublishDirectory>Always</CopyToPublishDirectory>
         </Reference>
       </ItemGroup>
     </When>
     <When Condition="$(IsLinux) OR '$(ForceLinuxBuild)' == 'true'">
       <ItemGroup>
-        <Reference Include="Python.Runtime, Version=2.0.3, Culture=neutral, processorArchitecture=MSIL">
-          <HintPath>..\packages\pythonnetcoreclr\2.0.3\lib\linux\netstandard2.0\Python.Runtime.dll</HintPath>
-        </Reference>
+        <Content Include="$(Pkgpythonnetcoreclr)\lib\linux\netstandard2.0\Python.Runtime.dll">
+          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+          <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+        </Content>
       </ItemGroup>
     </When>
     <When Condition="$(IsOSX) AND '$(ForceLinuxBuild)' != 'true'">
       <ItemGroup>
-        <Reference Include="Python.Runtime, Version=2.0.3, Culture=neutral, processorArchitecture=MSIL">
-          <HintPath>..\packages\pythonnetcoreclr\2.0.3\lib\osx\netstandard2.0\Python.Runtime.dll</HintPath>
-        </Reference>
+        <Content Include="$(Pkgpythonnetcoreclr)\lib\osx\netstandard2.0\Python.Runtime.dll">
+          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+          <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+        </Content>
       </ItemGroup>
     </When>
   </Choose>
@@ -156,6 +159,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="readme.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="pythonnetcoreclr" Version="2.0.4" GeneratePathProperty="true" />
   </ItemGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
