@@ -129,22 +129,22 @@
   <Choose>
     <When Condition="$(IsWindows) AND '$(ForceLinuxBuild)' != 'true'">
       <ItemGroup>
-        <Reference Include="Python.Runtime, Version=2.0.2, Culture=neutral, processorArchitecture=MSIL">
-          <HintPath>..\packages\pythonnetcoreclr.2.0.2\lib\win\netstandard2.0\Python.Runtime.dll</HintPath>
+        <Reference Include="Python.Runtime, Version=2.0.3, Culture=neutral, processorArchitecture=MSIL">
+          <HintPath>..\packages\pythonnetcoreclr.2.0.3\lib\win\netstandard2.0\Python.Runtime.dll</HintPath>
         </Reference>
       </ItemGroup>
     </When>
     <When Condition="$(IsLinux) OR '$(ForceLinuxBuild)' == 'true'">
       <ItemGroup>
-        <Reference Include="Python.Runtime, Version=2.0.2, Culture=neutral, processorArchitecture=MSIL">
-          <HintPath>..\packages\pythonnetcoreclr\2.0.2\lib\linux\netstandard2.0\Python.Runtime.dll</HintPath>
+        <Reference Include="Python.Runtime, Version=2.0.3, Culture=neutral, processorArchitecture=MSIL">
+          <HintPath>..\packages\pythonnetcoreclr\2.0.3\lib\linux\netstandard2.0\Python.Runtime.dll</HintPath>
         </Reference>
       </ItemGroup>
     </When>
     <When Condition="$(IsOSX) AND '$(ForceLinuxBuild)' != 'true'">
       <ItemGroup>
-        <Reference Include="Python.Runtime, Version=2.0.2, Culture=neutral, processorArchitecture=MSIL">
-          <HintPath>..\packages\pythonnetcoreclr\2.0.2\lib\osx\netstandard2.0\Python.Runtime.dll</HintPath>
+        <Reference Include="Python.Runtime, Version=2.0.3, Culture=neutral, processorArchitecture=MSIL">
+          <HintPath>..\packages\pythonnetcoreclr\2.0.3\lib\osx\netstandard2.0\Python.Runtime.dll</HintPath>
         </Reference>
       </ItemGroup>
     </When>
@@ -178,7 +178,7 @@
     <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
     <PackageReference Include="NodaTime" Version="1.3.4" />
     <PackageReference Include="QLNet" Version="1.9.2" />
-    <PackageReference Include="pythonnetcoreclr" Version="2.0.2" />
+    <PackageReference Include="pythonnetcoreclr" Version="2.0.3" />
     <PackageReference Include="SharpZipLib" Version="0.86.0" />
   </ItemGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it.

@@ -218,22 +218,22 @@
   <Choose>
     <When Condition="$(IsWindows) AND '$(ForceLinuxBuild)' != 'true'">
       <ItemGroup>
-        <Reference Include="Python.Runtime, Version=2.0.2, Culture=neutral, processorArchitecture=MSIL">
-          <HintPath>..\packages\pythonnetcoreclr\2.0.2\lib\win\netstandard2.0\Python.Runtime.dll</HintPath>
+        <Reference Include="Python.Runtime, Version=2.0.3, Culture=neutral, processorArchitecture=MSIL">
+          <HintPath>..\packages\pythonnetcoreclr\2.0.3\lib\win\netstandard2.0\Python.Runtime.dll</HintPath>
         </Reference>
       </ItemGroup>
     </When>
     <When Condition="$(IsLinux) OR '$(ForceLinuxBuild)' == 'true'">
       <ItemGroup>
-        <Reference Include="Python.Runtime, Version=2.0.2, Culture=neutral, processorArchitecture=MSIL">
-          <HintPath>..\packages\pythonnetcoreclr\2.0.2\lib\linux\netstandard2.0\Python.Runtime.dll</HintPath>
+        <Reference Include="Python.Runtime, Version=2.0.3, Culture=neutral, processorArchitecture=MSIL">
+          <HintPath>..\packages\pythonnetcoreclr\2.0.3\lib\linux\netstandard2.0\Python.Runtime.dll</HintPath>
         </Reference>
       </ItemGroup>
     </When>
     <When Condition="$(IsOSX) AND '$(ForceLinuxBuild)' != 'true'">
       <ItemGroup>
-        <Reference Include="Python.Runtime, Version=2.0.2, Culture=neutral, processorArchitecture=MSIL">
-          <HintPath>..\packages\pythonnetcoreclr\2.0.2\lib\osx\netstandard2.0\Python.Runtime.dll</HintPath>
+        <Reference Include="Python.Runtime, Version=2.0.3, Culture=neutral, processorArchitecture=MSIL">
+          <HintPath>..\packages\pythonnetcoreclr\2.0.3\lib\osx\netstandard2.0\Python.Runtime.dll</HintPath>
         </Reference>
       </ItemGroup>
     </When>
@@ -315,7 +315,7 @@
     <PackageReference Include="SocketIoClientDotNet" Version="1.0.7.1" />
     <PackageReference Include="SuperSocket.ClientEngine.Core" Version="0.10.0" />
     <PackageReference Include="WebSocket4Net" Version="0.15.2" />
-    <PackageReference Include="pythonnetcoreclr" Version="2.0.2" />
+    <PackageReference Include="pythonnetcoreclr" Version="2.0.3" />
   </ItemGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it.
        Other similar extension points exist, see Microsoft.Common.targets.
