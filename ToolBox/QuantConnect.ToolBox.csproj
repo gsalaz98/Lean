@@ -222,7 +222,7 @@
         <Content Include="$(Pkgpythonnetcoreclr)\lib\win\netstandard2.0\Python.Runtime.dll">
           <CopyToOutputDirectory>Always</CopyToOutputDirectory>
           <CopyToPublishDirectory>Always</CopyToPublishDirectory> 
-        </Reference>
+        </Content>
       </ItemGroup>
     </When>
     <When Condition="$(IsLinux) OR '$(ForceLinuxBuild)' == 'true'">
