@@ -161,7 +161,7 @@
     <None Include="readme.md" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="pythonnetcoreclr" Version="2.0.4" GeneratePathProperty="true" />
+    <PackageReference Include="pythonnetcoreclr" Version="2.0.5" GeneratePathProperty="true" />
   </ItemGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

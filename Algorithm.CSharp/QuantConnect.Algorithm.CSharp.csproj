@@ -177,7 +177,7 @@
     <PackageReference Include="Accord" Version="3.6.0" />
     <PackageReference Include="Accord.Fuzzy" Version="3.6.0" />
     <PackageReference Include="R.NET.Community" Version="1.6.5" />
-    <PackageReference Include="pythonnetcoreclr" Version="2.0.4" GeneratePathProperty="true" />
+    <PackageReference Include="pythonnetcoreclr" Version="2.0.5" GeneratePathProperty="true" />
   </ItemGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
