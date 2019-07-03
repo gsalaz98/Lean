@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -8,15 +8,17 @@
     <ProjectGuid>{3240ACA4-BDD4-4D24-AC36-BBB651C39212}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <RootNamespace>QuantConnect.Algorithm</RootNamespace>
     <AssemblyName>QuantConnect.Algorithm</AssemblyName>
-    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
+    <TargetFramework>netcoreapp3.0</TargetFramework>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <LangVersion>6</LangVersion>
     <NuGetPackageImportStamp>
     </NuGetPackageImportStamp>
+    <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -30,7 +32,29 @@
     <Prefer32Bit>false</Prefer32Bit>
     <LangVersion>6</LangVersion>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Debug\QuantConnect.Algorithm.xml</DocumentationFile>
+    <Prefer32Bit>false</Prefer32Bit>
+    <LangVersion>6</LangVersion>
+  </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+    <LangVersion>6</LangVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
@@ -99,23 +123,26 @@
   <Choose>
     <When Condition="$(IsWindows) AND '$(ForceLinuxBuild)' != 'true'">
       <ItemGroup>
-        <Reference Include="Python.Runtime, Version=1.0.5.20, Culture=neutral, processorArchitecture=MSIL">
-          <HintPath>..\packages\QuantConnect.pythonnet.1.0.5.20\lib\win\Python.Runtime.dll</HintPath>
-        </Reference>
+        <Content Include="$(Pkgpythonnetcoreclr)\lib\win\netstandard2.0\Python.Runtime.dll">
+          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+          <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+        </Content>
       </ItemGroup>
     </When>
     <When Condition="$(IsLinux) OR '$(ForceLinuxBuild)' == 'true'">
       <ItemGroup>
-        <Reference Include="Python.Runtime, Version=1.0.5.20, Culture=neutral, processorArchitecture=MSIL">
-          <HintPath>..\packages\QuantConnect.pythonnet.1.0.5.20\lib\linux\Python.Runtime.dll</HintPath>
-        </Reference>
+        <Content Include="$(Pkgpythonnetcoreclr)\lib\linux\netstandard2.0\Python.Runtime.dll">
+          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+          <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+        </Content>
       </ItemGroup>
     </When>
     <When Condition="$(IsOSX) AND '$(ForceLinuxBuild)' != 'true'">
       <ItemGroup>
-        <Reference Include="Python.Runtime, Version=1.0.5.20, Culture=neutral, processorArchitecture=MSIL">
-          <HintPath>..\packages\QuantConnect.pythonnet.1.0.5.20\lib\osx\Python.Runtime.dll</HintPath>
-        </Reference>
+        <Content Include="$(Pkgpythonnetcoreclr)\lib\osx\netstandard2.0\Python.Runtime.dll">
+          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+          <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+        </Content>
       </ItemGroup>
     </When>
   </Choose>
@@ -123,50 +150,6 @@
     <Compile Include="..\Common\Properties\SharedAssemblyInfo.cs">
       <Link>Properties\SharedAssemblyInfo.cs</Link>
     </Compile>
-    <Compile Include="Alphas\AlphaModel.cs" />
-    <Compile Include="Alphas\AlphaModelExtensions.cs" />
-    <Compile Include="Alphas\AlphaModelPythonWrapper.cs" />
-    <Compile Include="Alphas\CompositeAlphaModel.cs" />
-    <Compile Include="Alphas\IAlphaModel.cs" />
-    <Compile Include="Alphas\INamedModel.cs" />
-    <Compile Include="Alphas\NullAlphaModel.cs" />
-    <Compile Include="CandlestickPatterns.cs" />
-    <Compile Include="Execution\ExecutionModel.cs" />
-    <Compile Include="Execution\ExecutionModelPythonWrapper.cs" />
-    <Compile Include="Execution\IExecutionModel.cs" />
-    <Compile Include="Execution\ImmediateExecutionModel.cs" />
-    <Compile Include="Execution\NullExecutionModel.cs" />
-    <Compile Include="IndexUniverseDefinitions.cs" />
-    <Compile Include="DollarVolumeUniverseDefinitions.cs" />
-    <Compile Include="INotifiedSecurityChanges.cs" />
-    <Compile Include="Portfolio\IPortfolioConstructionModel.cs" />
-    <Compile Include="Portfolio\IPortfolioOptimizer.cs" />
-    <Compile Include="Portfolio\NullPortfolioConstructionModel.cs" />
-    <Compile Include="Portfolio\PortfolioConstructionModel.cs" />
-    <Compile Include="Portfolio\PortfolioConstructionModelPythonWrapper.cs" />
-    <Compile Include="QCAlgorithm.Framework.Python.cs" />
-    <Compile Include="Risk\CompositeRiskManagementModel.cs" />
-    <Compile Include="Risk\IRiskManagementModel.cs" />
-    <Compile Include="Risk\NullRiskManagementModel.cs" />
-    <Compile Include="Risk\RiskManagementModel.cs" />
-    <Compile Include="Risk\RiskManagementModelPythonWrapper.cs" />
-    <Compile Include="QCAlgorithm.cs" />
-    <Compile Include="QCAlgorithm.Framework.cs" />
-    <Compile Include="QCAlgorithm.History.cs" />
-    <Compile Include="QCAlgorithm.Python.cs" />
-    <Compile Include="QCAlgorithm.Trading.cs" />
-    <Compile Include="QCAlgorithm.Indicators.cs" />
-    <Compile Include="QCAlgorithm.Plotting.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="QCAlgorithm.Universe.cs" />
-    <Compile Include="Selection\CompositeUniverseSelectionModel.cs" />
-    <Compile Include="Selection\IUniverseSelectionModel.cs" />
-    <Compile Include="Selection\ManualUniverse.cs" />
-    <Compile Include="Selection\ManualUniverseSelectionModel.cs" />
-    <Compile Include="Selection\NullUniverseSelectionModel.cs" />
-    <Compile Include="Selection\UniverseSelectionModel.cs" />
-    <Compile Include="Selection\UniverseSelectionModelPythonWrapper.cs" />
-    <Compile Include="UniverseDefinitions.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Configuration\QuantConnect.Configuration.csproj">
@@ -217,15 +200,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
-  <Import Project="..\packages\QuantConnect.pythonnet.1.0.5.20\build\QuantConnect.pythonnet.targets" Condition="Exists('..\packages\QuantConnect.pythonnet.1.0.5.20\build\QuantConnect.pythonnet.targets')" />
-  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
-    <PropertyGroup>
-      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
-    </PropertyGroup>
-    <Error Condition="!Exists('..\packages\QuantConnect.pythonnet.1.0.5.20\build\QuantConnect.pythonnet.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\QuantConnect.pythonnet.1.0.5.20\build\QuantConnect.pythonnet.targets'))" />
-  </Target>
+  <ItemGroup>
+    <PackageReference Include="pythonnetcoreclr" Version="2.0.5" GeneratePathProperty="true" />
+  </ItemGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
