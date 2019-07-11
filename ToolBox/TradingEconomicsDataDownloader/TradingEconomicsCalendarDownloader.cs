@@ -16,6 +16,7 @@
 using Newtonsoft.Json;
 using QuantConnect.Data.Custom.TradingEconomics;
 using QuantConnect.Logging;
+using QuantConnect.Util;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -33,12 +34,16 @@ namespace QuantConnect.ToolBox.TradingEconomicsDataDownloader
         private readonly string _destinationFolder;
         private readonly DateTime _fromDate;
         private readonly DateTime _toDate;
+        private readonly RateGate _requestGate;
 
         public TradingEconomicsCalendarDownloader(string destinationFolder)
         {
             _fromDate = new DateTime(2000, 10, 01);
             _toDate = DateTime.Now;
             _destinationFolder = destinationFolder;
+            // Rate limits on Trading Economics is one request per second
+            _requestGate = new RateGate(1, TimeSpan.FromSeconds(1));
+
             Directory.CreateDirectory(_destinationFolder);
         }
 
@@ -48,6 +53,7 @@ namespace QuantConnect.ToolBox.TradingEconomicsDataDownloader
         /// <returns>True if process all downloads successfully</returns>
         public override bool Run()
         {
+            Log.Trace("TradingEconomicsCalendarDownloader.Run(): Begin downloading calendar data");
             var stopwatch = Stopwatch.StartNew();
             var data = new List<TradingEconomicsCalendar>();
 
@@ -57,6 +63,11 @@ namespace QuantConnect.ToolBox.TradingEconomicsDataDownloader
                 try
                 {
                     var endUtc = startUtc.AddMonths(1).AddDays(-1);
+
+                    Log.Trace($"TradingEconomicsCalendarDownloader.Run(): Collecting calendar data from {startUtc:yyyy-MM-dd} to {endUtc:yyyy-MM-dd}");
+
+                    _requestGate.WaitToProceed(TimeSpan.FromSeconds(1));
+
                     var content = Get(startUtc, endUtc).Result;
                     var collection = JsonConvert.DeserializeObject<List<TradingEconomicsCalendar>>(content);
 
@@ -66,12 +77,12 @@ namespace QuantConnect.ToolBox.TradingEconomicsDataDownloader
                 }
                 catch (Exception e)
                 {
-                    Log.Error(e, $"TradingEconomicsCalendarDownloader(): Error parsing data for date {startUtc:yyyyMMdd}");
+                    Log.Error(e, $"TradingEconomicsCalendarDownloader.Run(): Error parsing data for date {startUtc:yyyyMMdd}");
                     return false;
                 }
             }
 
-            Log.Trace($"TradingEconomicsCalendarDownloader(): {data.Count} calendar entries read in {stopwatch.Elapsed}");
+            Log.Trace($"TradingEconomicsCalendarDownloader.Run(): {data.Count} calendar entries read in {stopwatch.Elapsed}");
 
             foreach (var kvp in data.GroupBy(GetFileName))
             {
@@ -81,18 +92,21 @@ namespace QuantConnect.ToolBox.TradingEconomicsDataDownloader
                 try
                 {
                     var contents = JsonConvert.SerializeObject(kvp.ToList());
+                    Log.Trace($"TradingEconomicsCalendarDownloader.Run(): Writing file before compression: {path}");
                     File.WriteAllText(path, contents);
+
+                    Log.Trace($"TradingEconomicsCalendarDownloader.Run(): Compressing to: {zipPath}");
                     // Write out this data string to a zip file
                     Compression.Zip(path, zipPath, kvp.Key, true);
                 }
                 catch (Exception e)
                 {
-                    Log.Error(e, $"TradingEconomicsCalendarDownloader(): Error creating {path}");
+                    Log.Error(e, $"TradingEconomicsCalendarDownloader.Run(): Error creating {path}");
                     return false;
                 }
             }
 
-            Log.Trace($"TradingEconomicsCalendarDownloader(): Finished in {stopwatch.Elapsed}");
+            Log.Trace($"TradingEconomicsCalendarDownloader.Run(): Finished in {stopwatch.Elapsed}");
             return true;
         }
 

@@ -17,6 +17,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using QuantConnect.Data.Custom.TradingEconomics;
 using QuantConnect.Logging;
+using QuantConnect.Util;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -32,6 +33,7 @@ namespace QuantConnect.ToolBox.TradingEconomicsDataDownloader
     public class TradingEconomicsIndicatorDownloader : TradingEconomicsDataDownloader
     {
         private readonly string _destinationFolder;
+        private readonly RateGate _requestGate;
         private readonly DateTime _fromDate;
         private readonly DateTime _toDate;
         private string _indicator;
@@ -41,6 +43,8 @@ namespace QuantConnect.ToolBox.TradingEconomicsDataDownloader
             _fromDate = fromDate;
             _toDate = toDate;
             _destinationFolder = destinationFolder;
+            _requestGate = new RateGate(1, TimeSpan.FromSeconds(1));
+
             Directory.CreateDirectory(destinationFolder);
         }
 
@@ -50,7 +54,14 @@ namespace QuantConnect.ToolBox.TradingEconomicsDataDownloader
         /// <returns>True if process all downloads successfully</returns>
         public override bool Run()
         {
+            Log.Trace("TradingEconomicsIndicatorDownloader.Run(): Begin downloading indicator data");
+
             var stopwatch = Stopwatch.StartNew();
+
+            // Makes sure we don't request for data immediately after we query the `/indicators` endpoint
+            _requestGate.WaitToProceed(TimeSpan.FromSeconds(1));
+
+            Log.Trace("TradingEconomicsIndicatorDownloader.Run(): Getting list of indicators");
 
             var json = HttpRequester("/indicators").Result;
             var indicators = JArray.Parse(json).Select(x => x["Category"].Value<string>().ToLower());
@@ -67,6 +78,11 @@ namespace QuantConnect.ToolBox.TradingEconomicsDataDownloader
                     try
                     {
                         var endUtc = startUtc.AddMonths(1).AddDays(-1);
+
+                        Log.Trace($"TradingEconomicsIndicatorDownload.Run(): Collecting data for indicator: {indicator} - from {startUtc:yyyy-MM-dd} to {endUtc:yyyy-MM-dd}");
+
+                        _requestGate.WaitToProceed(TimeSpan.FromSeconds(1));
+
                         var content = Get(startUtc, endUtc).Result;
                         var collection = JsonConvert.DeserializeObject<List<TradingEconomicsIndicator>>(content);
 
@@ -76,12 +92,12 @@ namespace QuantConnect.ToolBox.TradingEconomicsDataDownloader
                     }
                     catch (Exception e)
                     {
-                        Log.Error(e, $"TradingEconomicsIndicatorsDownloader(): Error parsing data for date {startUtc:yyyyMMdd}");
+                        Log.Error(e, $"TradingEconomicsIndicatorDownloader.Run(): Error parsing data for date {startUtc:yyyyMMdd}");
                         return false;
                     }
                 }
 
-                Log.Trace($"TradingEconomicsIndicatorsDownloader(): {data.Count} {indicator} indicator entries read in {stopwatch.Elapsed}");
+                Log.Trace($"TradingEconomicsIndicatorDownloader.Run(): {data.Count} {indicator} indicator entries read in {stopwatch.Elapsed}");
 
                 foreach (var kvp in data.GroupBy(GetFileName))
                 {
@@ -91,20 +107,23 @@ namespace QuantConnect.ToolBox.TradingEconomicsDataDownloader
                     try
                     {
                         var contents = JsonConvert.SerializeObject(kvp.ToList());
+
+                        Log.Trace($"TradingEconomicsIndicatorDownloader.Run(): Writing file before compression: {path}");
                         File.WriteAllText(path, contents);
+
+                        Log.Trace($"TradingEconomicsIndicatorDownloader.Run(): Compressing to: {zipPath}");
                         // Write out this data string to a zip file
                         Compression.Zip(path, zipPath, kvp.Key, true);
                     }
                     catch (Exception e)
                     {
-                        Log.Error(e, $"TradingEconomicsIndicatorsDownloader(): Error creating {path}");
+                        Log.Error(e, $"TradingEconomicsIndicatorDownloader.Run(): Error creating {path}");
                         return false;
                     }
                 }
-
             }
 
-            Log.Trace($"TradingEconomicsIndicatorsDownloader(): Finished in {stopwatch.Elapsed}");
+            Log.Trace($"TradingEconomicsIndicatorDownloader.Run(): Finished in {stopwatch.Elapsed}");
             return true;
         }
 
