@@ -49,7 +49,7 @@ namespace QuantConnect.ToolBox.TradingEconomicsDataDownloader
 
         public async Task<string> HttpRequester(string url)
         {
-            for (var retries = 0; retries < 5; retries++)
+            for (var retries = 1; retries <= 5; retries++)
             {
                 try
                 {
@@ -74,7 +74,7 @@ namespace QuantConnect.ToolBox.TradingEconomicsDataDownloader
                 }
                 catch (HttpRequestException e)
                 {
-                    if (retries < 5)
+                    if (retries <= 5)
                     {
                         Log.Trace($"TradingEconomicsDataDownloader.HttpRequester(): HTTP Request failed (attempt {retries} / 5). Retrying...");
                         continue;
