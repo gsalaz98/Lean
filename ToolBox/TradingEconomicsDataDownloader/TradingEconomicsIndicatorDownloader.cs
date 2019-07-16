@@ -34,7 +34,6 @@ namespace QuantConnect.ToolBox.TradingEconomicsDataDownloader
     /// </summary>
     public class TradingEconomicsIndicatorDownloader : TradingEconomicsDataDownloader
     {
-        private readonly MapFileResolver _mapFileResolver;
         private readonly string _destinationFolder;
         private readonly RateGate _requestGate;
         private readonly DateTime _fromDate;
@@ -47,7 +46,6 @@ namespace QuantConnect.ToolBox.TradingEconomicsDataDownloader
             _toDate = toDate;
             _destinationFolder = destinationFolder;
             _requestGate = new RateGate(1, TimeSpan.FromSeconds(1));
-            _mapFileResolver = MapFileResolver.Create(Globals.DataFolder, Market.USA);
 
             Directory.CreateDirectory(destinationFolder);
         }
@@ -60,6 +58,9 @@ namespace QuantConnect.ToolBox.TradingEconomicsDataDownloader
         {
             Log.Trace("TradingEconomicsIndicatorDownloader.Run(): Begin downloading indicator data");
 
+            // Create the destination directory so that we don't error out in case there's no data
+            Directory.CreateDirectory(Path.Combine(_destinationFolder, "indicator"));
+
             var stopwatch = Stopwatch.StartNew();
 
             // Makes sure we don't request for data immediately after we query the `/indicators` endpoint
@@ -70,8 +71,16 @@ namespace QuantConnect.ToolBox.TradingEconomicsDataDownloader
             var json = HttpRequester("/indicators").Result;
             var indicators = JArray.Parse(json).Select(x => x["Category"].Value<string>().ToLower());
             var availableFiles = Directory.GetFiles(Path.Combine(_destinationFolder, "indicator"), "*.zip", SearchOption.AllDirectories)
+                .Where(
+                    x =>
+                    {
+                        DateTime _;
+                        return DateTime.TryParseExact(Path.GetFileName(x).Substring(0, 8), "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal, out _);
+                    }
+                )
                 .Select(x => DateTime.ParseExact(Path.GetFileName(x).Substring(0, 8), "yyyyMMdd", CultureInfo.InvariantCulture))
                 .ToHashSet();
+
 
             foreach (var indicator in indicators)
             {
@@ -112,45 +121,57 @@ namespace QuantConnect.ToolBox.TradingEconomicsDataDownloader
 
                 Log.Trace($"TradingEconomicsIndicatorDownloader.Run(): {data.Count} {indicator} indicator entries read in {stopwatch.Elapsed}");
 
-                foreach (var kvp in data.GroupBy(GetTicker))
-                {
-                    // Create the destination directory, otherwise we risk having it fail when we move
-                    // the temp file to its final destination
-                    Directory.CreateDirectory(Path.Combine(_destinationFolder, "indicator", kvp.Key));
+                // Return status code. We default to `true` so that we can identify if an error occured during the loop
+                var status = true;
 
-                    foreach (var indicatorByDate in kvp.GroupBy(x => x.LastUpdate))
+                Parallel.ForEach(data.GroupBy(GetTicker),
+                    (kvp, state) =>
                     {
-                        var date = indicatorByDate.Key.ToString("yyyyMMdd");
-                        var tempPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.json");
-                        var tempZipPath = tempPath.Replace(".json", ".zip");
-                        var finalZipPath = Path.Combine(_destinationFolder, "indicator", kvp.Key, $"{date}.zip");
+                        // Create the destination directory, otherwise we risk having it fail when we move
+                        // the temp file to its final destination
+                        Directory.CreateDirectory(Path.Combine(_destinationFolder, "indicator", kvp.Key));
 
-                        if (File.Exists(finalZipPath))
+                        foreach (var indicatorByDate in kvp.GroupBy(x => x.LastUpdate))
                         {
-                            Log.Trace($"TradingEconomicsIndicatorDownloader.Run(): {date} - Skipping file because it already exists: {finalZipPath}");
-                            continue;
-                        }
+                            var date = indicatorByDate.Key.ToString("yyyyMMdd");
+                            var tempPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.json");
+                            var tempZipPath = tempPath.Replace(".json", ".zip");
+                            var finalZipPath = Path.Combine(_destinationFolder, "indicator", kvp.Key, $"{date}.zip");
 
-                        try
-                        {
-                            var contents = JsonConvert.SerializeObject(indicatorByDate.ToList());
+                            if (File.Exists(finalZipPath))
+                            {
+                                Log.Trace($"TradingEconomicsIndicatorDownloader.Run(): {date} - Skipping file because it already exists: {finalZipPath}");
+                                continue;
+                            }
 
-                            Log.Trace($"TradingEconomicsIndicatorDownloader.Run(): {date} - Writing file before compression: {tempPath}");
-                            File.WriteAllText(tempPath, contents);
+                            try
+                            {
+                                var contents = JsonConvert.SerializeObject(indicatorByDate.ToList());
 
-                            Log.Trace($"TradingEconomicsIndicatorDownloader.Run(): {date} - Compressing to: {tempZipPath}");
-                            // Write out this data string to a zip file
-                            Compression.Zip(tempPath, tempZipPath, $"{date}.json", true);
+                                Log.Trace($"TradingEconomicsIndicatorDownloader.Run(): {date} - Writing file before compression: {tempPath}");
+                                File.WriteAllText(tempPath, contents);
 
-                            Log.Trace($"TradingEconomicsIndicatorDownloader.Run(): {date} - Moving temp file: {tempZipPath} to {finalZipPath}");
-                            File.Move(tempZipPath, finalZipPath);
-                        }
-                        catch (Exception e)
-                        {
-                            Log.Error(e, $"TradingEconomicsIndicatorDownloader.Run(): {date} - Error creating zip file for ticker: {kvp.Key}");
-                            return false;
+                                Log.Trace($"TradingEconomicsIndicatorDownloader.Run(): {date} - Compressing to: {tempZipPath}");
+                                // Write out this data string to a zip file
+                                Compression.Zip(tempPath, tempZipPath, $"{date}.json", true);
+
+                                Log.Trace($"TradingEconomicsIndicatorDownloader.Run(): {date} - Moving temp file: {tempZipPath} to {finalZipPath}");
+                                File.Move(tempZipPath, finalZipPath);
+                            }
+                            catch (Exception e)
+                            {
+                                Log.Error(e, $"TradingEconomicsIndicatorDownloader.Run(): {date} - Error creating zip file for ticker: {kvp.Key}");
+                                status = false;
+                                state.Stop();
+                            }
                         }
                     }
+                );
+
+                // Exit the indicator download loop early if we've had an error inside the loop
+                if (!status)
+                {
+                    return status;
                 }
             }
 

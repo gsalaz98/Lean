@@ -33,7 +33,6 @@ namespace QuantConnect.ToolBox.TradingEconomicsDataDownloader
     /// </summary>
     public class TradingEconomicsCalendarDownloader : TradingEconomicsDataDownloader
     {
-        private readonly MapFileResolver _mapfileResolver;
         private readonly string _destinationFolder;
         private readonly DateTime _fromDate;
         private readonly DateTime _toDate;
@@ -46,7 +45,6 @@ namespace QuantConnect.ToolBox.TradingEconomicsDataDownloader
             _destinationFolder = destinationFolder;
             // Rate limits on Trading Economics is one request per second
             _requestGate = new RateGate(1, TimeSpan.FromSeconds(1));
-            _mapfileResolver = MapFileResolver.Create(Globals.DataFolder, Market.USA);
 
             Directory.CreateDirectory(_destinationFolder);
         }
@@ -58,6 +56,10 @@ namespace QuantConnect.ToolBox.TradingEconomicsDataDownloader
         public override bool Run()
         {
             Log.Trace("TradingEconomicsCalendarDownloader.Run(): Begin downloading calendar data");
+
+            // Create the destination directory so that we don't error out in case there's no data
+            Directory.CreateDirectory(Path.Combine(_destinationFolder, "calendar"));
+
             var stopwatch = Stopwatch.StartNew();
             var data = new List<TradingEconomicsCalendar>();
             var availableFiles = Directory.GetFiles(Path.Combine(_destinationFolder, "calendar"), "*.zip", SearchOption.AllDirectories)
@@ -119,48 +121,54 @@ namespace QuantConnect.ToolBox.TradingEconomicsDataDownloader
 
             Log.Trace($"TradingEconomicsCalendarDownloader.Run(): {data.Count} calendar entries read in {stopwatch.Elapsed}");
 
-            foreach (var kvp in data.GroupBy(GetTicker))
-            {
-                // Create the destination directory, otherwise we risk having it fail when we move
-                // the temp file to its final destination
-                Directory.CreateDirectory(Path.Combine(_destinationFolder, "calendar", kvp.Key));
+            // Return status code (true for success and false for failure)
+            var status = true;
 
-                foreach (var calendarDataByDate in kvp.GroupBy(x => x.LastUpdate.Date))
+            Parallel.ForEach(data.GroupBy(GetTicker),
+                (kvp, state) =>
                 {
-                    var date = calendarDataByDate.Key.ToString("yyyyMMdd");
-                    var tempPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.json");
-                    var tempZipPath = tempPath.Replace(".json", ".zip");
-                    var finalZipPath = Path.Combine(_destinationFolder, "calendar", kvp.Key, $"{date}.zip");
+                    // Create the destination directory, otherwise we risk having it fail when we move
+                    // the temp file to its final destination
+                    Directory.CreateDirectory(Path.Combine(_destinationFolder, "calendar", kvp.Key));
 
-                    if (File.Exists(finalZipPath))
+                    foreach (var calendarDataByDate in kvp.GroupBy(x => x.LastUpdate.Date))
                     {
-                        Log.Trace($"TradingEconomicsCalendarDownloader.Run(): {date} - Skipping file because it already exists: {finalZipPath}");
-                        continue;
-                    }
+                        var date = calendarDataByDate.Key.ToString("yyyyMMdd");
+                        var tempPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.json");
+                        var tempZipPath = tempPath.Replace(".json", ".zip");
+                        var finalZipPath = Path.Combine(_destinationFolder, "calendar", kvp.Key, $"{date}.zip");
 
-                    try
-                    {
-                        var contents = JsonConvert.SerializeObject(calendarDataByDate.ToList());
-                        Log.Trace($"TradingEconomicsCalendarDownloader.Run(): {date} - Writing file before compression: {tempPath}");
-                        File.WriteAllText(tempPath, contents);
+                        if (File.Exists(finalZipPath))
+                        {
+                            Log.Trace($"TradingEconomicsCalendarDownloader.Run(): {date} - Skipping file because it already exists: {finalZipPath}");
+                            continue;
+                        }
 
-                        Log.Trace($"TradingEconomicsCalendarDownloader.Run(): {date} - Compressing to: {tempZipPath}");
-                        // Write out this data string to a zip file
-                        Compression.Zip(tempPath, tempZipPath, $"{date}.json", true);
+                        try
+                        {
+                            var contents = JsonConvert.SerializeObject(calendarDataByDate.ToList());
+                            Log.Trace($"TradingEconomicsCalendarDownloader.Run(): {date} - Writing file before compression: {tempPath}");
+                            File.WriteAllText(tempPath, contents);
 
-                        Log.Trace($"TradingEconomicsCalendarDownloader.Run(): {date} - Moving temp file: {tempZipPath} to {finalZipPath}");
-                        File.Move(tempZipPath, finalZipPath);
-                    }
-                    catch (Exception e)
-                    {
-                        Log.Error(e, $"TradingEconomicsCalendarDownloader.Run(): {date} - Error creating zip file for ticker: {kvp.Key}");
-                        return false;
+                            Log.Trace($"TradingEconomicsCalendarDownloader.Run(): {date} - Compressing to: {tempZipPath}");
+                            // Write out this data string to a zip file
+                            Compression.Zip(tempPath, tempZipPath, $"{date}.json", true);
+
+                            Log.Trace($"TradingEconomicsCalendarDownloader.Run(): {date} - Moving temp file: {tempZipPath} to {finalZipPath}");
+                            File.Move(tempZipPath, finalZipPath);
+                        }
+                        catch (Exception e)
+                        {
+                            Log.Error(e, $"TradingEconomicsCalendarDownloader.Run(): {date} - Error creating zip file for ticker: {kvp.Key}");
+                            status = false;
+                            state.Stop();
+                        }
                     }
                 }
-            }
+            );
 
             Log.Trace($"TradingEconomicsCalendarDownloader.Run(): Finished in {stopwatch.Elapsed}");
-            return true;
+            return status;
         }
 
         /// <summary>
