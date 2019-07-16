@@ -60,8 +60,15 @@ namespace QuantConnect.ToolBox.TradingEconomicsDataDownloader
             Log.Trace("TradingEconomicsCalendarDownloader.Run(): Begin downloading calendar data");
             var stopwatch = Stopwatch.StartNew();
             var data = new List<TradingEconomicsCalendar>();
-            var availableFiles = Directory.GetFiles(_destinationFolder, "*.zip", SearchOption.AllDirectories)
-                .Select(x => DateTime.ParseExact(Path.GetFileName(x).Substring(8), "yyyyMMdd", CultureInfo.InvariantCulture))
+            var availableFiles = Directory.GetFiles(Path.Combine(_destinationFolder, "calendar"), "*.zip", SearchOption.AllDirectories)
+                .Where(
+                    x =>
+                    {
+                        DateTime _;
+                        return DateTime.TryParseExact(Path.GetFileName(x).Substring(0, 8), "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal, out _);
+                    }
+                )
+                .Select(x => DateTime.ParseExact(Path.GetFileName(x).Substring(0, 8), "yyyyMMdd", CultureInfo.InvariantCulture))
                 .ToHashSet();
 
             var startUtc = _fromDate;
@@ -116,14 +123,14 @@ namespace QuantConnect.ToolBox.TradingEconomicsDataDownloader
             {
                 // Create the destination directory, otherwise we risk having it fail when we move
                 // the temp file to its final destination
-                Directory.CreateDirectory(Path.Combine(_destinationFolder, kvp.Key));
+                Directory.CreateDirectory(Path.Combine(_destinationFolder, "calendar", kvp.Key));
 
                 foreach (var calendarDataByDate in kvp.GroupBy(x => x.LastUpdate.Date))
                 {
                     var date = calendarDataByDate.Key.ToString("yyyyMMdd");
                     var tempPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.json");
                     var tempZipPath = tempPath.Replace(".json", ".zip");
-                    var finalZipPath = Path.Combine(_destinationFolder, kvp.Key, $"{date}.zip");
+                    var finalZipPath = Path.Combine(_destinationFolder, "calendar", kvp.Key, $"{date}.zip");
 
                     if (File.Exists(finalZipPath))
                     {

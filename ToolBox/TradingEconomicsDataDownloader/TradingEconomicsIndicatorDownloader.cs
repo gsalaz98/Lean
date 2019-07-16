@@ -69,8 +69,8 @@ namespace QuantConnect.ToolBox.TradingEconomicsDataDownloader
 
             var json = HttpRequester("/indicators").Result;
             var indicators = JArray.Parse(json).Select(x => x["Category"].Value<string>().ToLower());
-            var availableFiles = Directory.GetFiles(_destinationFolder, "*.zip", SearchOption.AllDirectories)
-                .Select(x => DateTime.ParseExact(Path.GetFileName(x).Substring(8), "yyyyMMdd", CultureInfo.InvariantCulture))
+            var availableFiles = Directory.GetFiles(Path.Combine(_destinationFolder, "indicator"), "*.zip", SearchOption.AllDirectories)
+                .Select(x => DateTime.ParseExact(Path.GetFileName(x).Substring(0, 8), "yyyyMMdd", CultureInfo.InvariantCulture))
                 .ToHashSet();
 
             foreach (var indicator in indicators)
@@ -116,14 +116,14 @@ namespace QuantConnect.ToolBox.TradingEconomicsDataDownloader
                 {
                     // Create the destination directory, otherwise we risk having it fail when we move
                     // the temp file to its final destination
-                    Directory.CreateDirectory(Path.Combine(_destinationFolder, kvp.Key));
+                    Directory.CreateDirectory(Path.Combine(_destinationFolder, "indicator", kvp.Key));
 
                     foreach (var indicatorByDate in kvp.GroupBy(x => x.LastUpdate))
                     {
                         var date = indicatorByDate.Key.ToString("yyyyMMdd");
                         var tempPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.json");
                         var tempZipPath = tempPath.Replace(".json", ".zip");
-                        var finalZipPath = Path.Combine(_destinationFolder, kvp.Key, $"{date}.zip");
+                        var finalZipPath = Path.Combine(_destinationFolder, "indicator", kvp.Key, $"{date}.zip");
 
                         if (File.Exists(finalZipPath))
                         {
