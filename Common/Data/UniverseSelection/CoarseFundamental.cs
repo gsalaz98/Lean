@@ -24,6 +24,11 @@ namespace QuantConnect.Data.UniverseSelection
     public class CoarseFundamental : BaseData
     {
         /// <summary>
+        /// :)
+        /// </summary>
+        public string Something { get; set; }
+
+        /// <summary>
         /// Gets the market for this symbol
         /// </summary>
         public string Market { get; set; }
