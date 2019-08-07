@@ -220,6 +220,8 @@
     <Compile Include="ChartPoint.cs" />
     <Compile Include="Data\Consolidators\CalendarType.cs" />
     <Compile Include="Data\Consolidators\FilteredIdentityDataConsolidator.cs" />
+    <Compile Include="Data\Custom\BrainData\BrainDataSentiment.cs" />
+    <Compile Include="Data\Custom\BrainData\BrainDataRanking.cs" />
     <Compile Include="Data\Custom\FxcmVolume.cs" />
     <Compile Include="Data\Custom\SEC\ISECReport.cs" />
     <Compile Include="Data\Custom\SEC\SECReportBusinessAddress.cs" />
@@ -255,6 +257,7 @@
     <Compile Include="Expiry.cs" />
     <Compile Include="HistoryProviderEvents.cs" />
     <Compile Include="Indicators\IIndicatorWarmUpPeriodProvider.cs" />
+    <Compile Include="Interfaces\IDataConvertable.cs" />
     <Compile Include="Interfaces\IAccountCurrencyProvider.cs" />
     <Compile Include="Interfaces\IAlgorithmSubscriptionManager.cs" />
     <Compile Include="Interfaces\IBrokerageCashSynchronizer.cs" />
