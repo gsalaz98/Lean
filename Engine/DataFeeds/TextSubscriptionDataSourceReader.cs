@@ -24,6 +24,8 @@ using QuantConnect.Lean.Engine.DataFeeds.Transport;
 using System.Runtime.Caching;
 using QuantConnect.Data.Fundamental;
 using QuantConnect.Data.UniverseSelection;
+using QuantConnect.Data.Market;
+using System.Runtime.InteropServices;
 
 namespace QuantConnect.Lean.Engine.DataFeeds
 {
@@ -100,46 +102,62 @@ namespace QuantConnect.Lean.Engine.DataFeeds
                 source.TransportMedium == SubscriptionTransportMedium.LocalFile;
             var cacheItem = _shouldCacheDataPoints
                 ? BaseDataSourceCache.GetCacheItem(source.Source + _config.Type) : null;
+
             if (cacheItem == null)
             {
                 cache = new List<BaseData>();
-                using (var reader = CreateStreamReader(source))
+                if (_config.SecurityType == SecurityType.Equity && _config.Resolution == Resolution.Tick && _config.Market == Market.USA)
                 {
-                    // if the reader doesn't have data then we're done with this subscription
-                    if (reader == null || reader.EndOfStream)
-                    {
-                        OnCreateStreamReaderError(_date, source);
-                        yield break;
-                    }
-                    // while the reader has data
-                    while (!reader.EndOfStream)
-                    {
-                        // read a line and pass it to the base data factory
-                        var line = reader.ReadLine();
-                        BaseData instance = null;
-                        try
-                        {
-                            instance = _factory.Reader(_config, line, _date, _isLiveMode);
-                        }
-                        catch (Exception err)
-                        {
-                            OnReaderError(line, err);
-                        }
+                    var dataResult = Tick.ParseEquityTickExtern(source.Source);
+                    var data = new long[dataResult.size];
 
-                        if (instance != null && instance.EndTime != default(DateTime))
+                    foreach (var tick in Tick.ParseEquityFromBytes(_config, _date, dataResult.size, dataResult.buf))
+                    {
+                        yield return tick;
+                    }
+
+                    Tick.DisposeExtern(dataResult);
+                }
+                else
+                {
+                    using (var reader = CreateStreamReader(source))
+                    {
+                        // if the reader doesn't have data then we're done with this subscription
+                        if (reader == null || reader.EndOfStream)
                         {
-                            if (_shouldCacheDataPoints)
+                            OnCreateStreamReaderError(_date, source);
+                            yield break;
+                        }
+                        // while the reader has data
+                        while (!reader.EndOfStream)
+                        {
+                            // read a line and pass it to the base data factory
+                            var line = reader.ReadLine();
+                            BaseData instance = null;
+                            try
                             {
-                                cache.Add(instance);
+                                instance = _factory.Reader(_config, line, _date, _isLiveMode);
                             }
-                            else
+                            catch (Exception err)
+                            {
+                                OnReaderError(line, err);
+                            }
+
+                            if (instance != null && instance.EndTime != default(DateTime))
+                            {
+                                if (_shouldCacheDataPoints)
+                                {
+                                    cache.Add(instance);
+                                }
+                                else
+                                {
+                                    yield return instance;
+                                }
+                            }
+                            else if (reader.ShouldBeRateLimited)
                             {
                                 yield return instance;
                             }
-                        }
-                        else if (reader.ShouldBeRateLimited)
-                        {
-                            yield return instance;
                         }
                     }
                 }

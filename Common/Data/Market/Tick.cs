@@ -14,7 +14,9 @@
 */
 
 using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Runtime.InteropServices;
 using QuantConnect.Logging;
 using QuantConnect.Util;
 
@@ -432,6 +434,45 @@ namespace QuantConnect.Data.Market
         private static decimal GetScaleFactor(SecurityType securityType)
         {
             return securityType == SecurityType.Equity || securityType == SecurityType.Option ? 10000m : 1;
+        }
+
+        [DllImport("lean_ffi.dll", CallingConvention = CallingConvention.Cdecl), System.Security.SuppressUnmanagedCodeSecurity]
+        public static extern TickResult ParseEquityTickExtern(string path);
+
+        [DllImport("lean_ffi.dll", CallingConvention = CallingConvention.Cdecl), System.Security.SuppressUnmanagedCodeSecurity]
+        public static extern void DisposeExtern(TickResult result);
+
+        public static IEnumerable<BaseData> ParseEquityFromBytes(SubscriptionDataConfig config, DateTime date, int size, IntPtr buf)
+        {
+            var scaleFactor = GetScaleFactor(SecurityType.Equity);
+            var data = new List<BaseData>(size);
+
+            unsafe
+            {
+                var bytes = (long*)buf.ToPointer();
+                for (var i = 0; i < size; i += 6)
+                {
+                    data.Add(new Tick
+                    {
+                        Symbol = config.Symbol,
+                        Time = date.Date.AddMilliseconds(bytes[i]).ConvertTo(config.DataTimeZone, config.ExchangeTimeZone),
+                        Value = bytes[i + 1] / (decimal)scaleFactor,
+                        TickType = TickType.Trade,
+                        Quantity = bytes[i + 2],
+                        Exchange = ((char)bytes[i + 3]).ToString(CultureInfo.InvariantCulture),
+                        SaleCondition = ((char)bytes[i + 4]).ToString(CultureInfo.InvariantCulture),
+                        Suspicious = bytes[i + 5] == 1
+                    });
+                }
+            }
+
+            return data;
+        }
+
+        public struct TickResult
+        {
+            public int size;
+            public IntPtr buf;
         }
 
     } // End Tick Class:
