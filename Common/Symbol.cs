@@ -95,10 +95,10 @@ namespace QuantConnect
         /// <param name="mapSymbol">Indicates whether we should map the symbol</param>
         /// <param name="underlying">Underlying symbol to chain to custom data</param>
         /// <returns>New symbol that can contain an underlying</returns>
-        public static Symbol CreateBase(Type baseType, string ticker, string market, bool mapSymbol = false, Symbol underlying = null)
+        public static Symbol CreateBase(Type baseType, Symbol underlying, string market)
         {
-            var sid = SecurityIdentifier.GenerateBase(baseType, ticker, market, mapSymbol);
-            return new Symbol(sid, ticker, underlying);
+            var sid = SecurityIdentifier.GenerateBase(baseType, underlying.ID.Symbol, market, mapSymbol: false, date: underlying.ID.Date);
+            return new Symbol(sid, underlying.Value, underlying);
         }
 
         /// <summary>
