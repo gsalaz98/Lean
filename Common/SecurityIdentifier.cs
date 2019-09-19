@@ -402,6 +402,7 @@ namespace QuantConnect
         /// <param name="symbol">The ticker symbol of this security</param>
         /// <param name="market">The security's market</param>
         /// <param name="mapSymbol">Whether or not we should map this symbol</param>
+        /// <param name="date">First date that the security traded on</param>
         /// <returns>A new <see cref="SecurityIdentifier"/> representing the specified base security</returns>
         public static SecurityIdentifier GenerateBase(Type dataType, string symbol, string market, bool mapSymbol = false, DateTime? date = null)
         {
