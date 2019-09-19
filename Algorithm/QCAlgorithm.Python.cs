@@ -123,9 +123,17 @@ namespace QuantConnect.Algorithm
             Symbol underlying;
             if (!SymbolCache.TryGetSymbol(ticker, out underlying))
             {
-                return AddData(dataType, (Symbol)ticker, resolution, timeZone, fillDataForward, leverage);
-            }
+                var baseInstance = (BaseData)ObjectActivator.GetActivator(dataType).Invoke(new object[] { dataType });
 
+                if (baseInstance.RequiresMapping())
+                {
+                    throw new InvalidOperationException("Requires mapping but passed ticker which is not in the cache");
+                }
+                var symbol = new Symbol(
+                    SecurityIdentifier.GenerateBase(dataType, ticker, Market.USA, dataType.GetBaseDataInstance().RequiresMapping()),
+                    ticker);
+                return AddDataImpl(dataType, symbol, resolution, timeZone, fillDataForward, leverage);
+            }
             return AddData(dataType, underlying, resolution, timeZone, fillDataForward, leverage);
         }
 
@@ -133,7 +141,7 @@ namespace QuantConnect.Algorithm
         /// AddData a new user defined data source, requiring only the minimum config options.
         /// </summary>
         /// <param name="dataType">Data source type</param>
-        /// <param name="symbol">Symbol object to set as underlying and use as ticker as of that date</param>
+        /// <param name="underlying"></param>
         /// <param name="resolution">Resolution of the Data Required</param>
         /// <param name="timeZone">Specifies the time zone of the raw data</param>
         /// <param name="fillDataForward">When no data available on a tradebar, return the last data that was generated</param>
@@ -141,9 +149,12 @@ namespace QuantConnect.Algorithm
         /// <returns>The new <see cref="Security"/></returns>
         public Security AddData(Type dataType, Symbol underlying, Resolution resolution, DateTimeZone timeZone, bool fillDataForward = false, decimal leverage = 1.0m)
         {
-            Log($"main method symbol {underlying.ID}");
             var symbol = QuantConnect.Symbol.CreateBase(dataType, underlying, Market.USA);
+            return AddDataImpl(dataType, symbol, resolution, timeZone, fillDataForward, leverage);
+        }
 
+        private Security AddDataImpl(Type dataType, Symbol symbol, Resolution resolution, DateTimeZone timeZone, bool fillDataForward, decimal leverage)
+        {
             var alias = symbol.ID.Symbol;
             SymbolCache.Set(alias, symbol);
             MarketHoursDatabase.SetEntryAlwaysOpen(Market.USA, alias, SecurityType.Base, timeZone);
@@ -158,7 +169,7 @@ namespace QuantConnect.Algorithm
                 extendedMarketHours: true);
             var security = Securities.CreateSecurity(symbol, config, leverage, addToSymbolCache: false);
 
-            AddToUserDefinedUniverse(security, new List<SubscriptionDataConfig> {config});
+            AddToUserDefinedUniverse(security, new List<SubscriptionDataConfig> { config });
             return security;
         }
 
