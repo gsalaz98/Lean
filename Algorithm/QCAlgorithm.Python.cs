@@ -57,7 +57,22 @@ namespace QuantConnect.Algorithm
         /// <returns>The new <see cref="Security"/></returns>
         public Security AddData(PyObject type, string ticker, Resolution resolution = Resolution.Minute)
         {
+            Log($"Initial entrypoint ticker + {ticker}");
             return AddData(type, ticker, resolution, TimeZones.NewYork, false, 1m);
+        }
+
+        /// <summary>
+        /// AddData a new user defined data source, requiring only the minimum config options.
+        /// The data is added with a default time zone of NewYork (Eastern Daylight Savings Time)
+        /// </summary>
+        /// <param name="type">Data source type</param>
+        /// <param name="underlying">The underlying symbol for the custom data</param>
+        /// <param name="resolution">Resolution of the data</param>
+        /// <returns>The new <see cref="Security"/></returns>
+        public Security AddData(PyObject type, Symbol underlying, Resolution resolution = Resolution.Minute)
+        {
+            Log("Initial entrypoint symbol");
+            return AddData(type, underlying, resolution, TimeZones.NewYork, false, 1m);
         }
 
         /// <summary>
@@ -72,7 +87,24 @@ namespace QuantConnect.Algorithm
         /// <returns>The new <see cref="Security"/></returns>
         public Security AddData(PyObject type, string ticker, Resolution resolution, DateTimeZone timeZone, bool fillDataForward = false, decimal leverage = 1.0m)
         {
+            Log("Hello from ticker pre-main method");
             return AddData(CreateType(type), ticker, resolution, timeZone, fillDataForward, leverage);
+        }
+
+        /// <summary>
+        /// AddData a new user defined data source, requiring only the minimum config options.
+        /// </summary>
+        /// <param name="type">Data source type</param>
+        /// <param name="underlying">The underlying symbol for the custom data</param>
+        /// <param name="resolution">Resolution of the Data Required</param>
+        /// <param name="timeZone">Specifies the time zone of the raw data</param>
+        /// <param name="fillDataForward">When no data available on a tradebar, return the last data that was generated</param>
+        /// <param name="leverage">Custom leverage per security</param>
+        /// <returns>The new <see cref="Security"/></returns>
+        public Security AddData(PyObject type, Symbol underlying, Resolution resolution, DateTimeZone timeZone, bool fillDataForward = false, decimal leverage = 1.0m)
+        {
+            Log("Hello from Symbol" );
+            return AddData(CreateType(type), underlying, resolution, timeZone, fillDataForward, leverage);
         }
 
         /// <summary>
@@ -87,6 +119,7 @@ namespace QuantConnect.Algorithm
         /// <returns>The new <see cref="Security"/></returns>
         public Security AddData(Type dataType, string ticker, Resolution resolution, DateTimeZone timeZone, bool fillDataForward = false, decimal leverage = 1.0m)
         {
+            Log("Main method ticker");
             Symbol underlying;
             if (!SymbolCache.TryGetSymbol(ticker, out underlying))
             {
@@ -108,6 +141,7 @@ namespace QuantConnect.Algorithm
         /// <returns>The new <see cref="Security"/></returns>
         public Security AddData(Type dataType, Symbol underlying, Resolution resolution, DateTimeZone timeZone, bool fillDataForward = false, decimal leverage = 1.0m)
         {
+            Log("main method symbol");
             //Add this to the data-feed subscriptions
             var symbol = QuantConnect.Symbol.CreateBase(dataType, underlying, Market.USA);
 

@@ -18,7 +18,9 @@ AddReference("QuantConnect.Common")
 
 from System import *
 from QuantConnect import *
+from QuantConnect import Symbol as SymbolC
 from QuantConnect.Algorithm import *
+from QuantConnect.Data.Custom.SEC import *
 import numpy as np
 
 ### <summary>
@@ -37,9 +39,15 @@ class BasicTemplateAlgorithm(QCAlgorithm):
         self.SetStartDate(2013,10, 7)  #Set Start Date
         self.SetEndDate(2013,10,11)    #Set End Date
         self.SetCash(100000)           #Set Strategy Cash
-        # Find more symbols here: http://quantconnect.com/data
-        self.AddEquity("SPY", Resolution.Second)
-        self.Debug("numpy test >>> print numpy.pi: " + str(np.pi))
+
+        self.Log("Adding Equity")
+        self.symbol = self.AddEquity("SPY", Resolution.Second).Symbol
+        self.Log("Adding SECReport10K SPY with ticker")
+        a = self.AddData(SECReport10K, "SPY", Resolution.Second).Symbol
+        self.Log(f"SPY - {a.ID}")
+        self.Log("Adding SECReport8K AAPL with Symbol")
+        b = self.AddData(SECReport8K, SymbolC.Create("AAPL", SecurityType.Equity, Market.USA), Resolution.Second).Symbol
+        self.Log(f"AAPL - {b.ID}")
 
     def OnData(self, data):
         '''OnData event is the primary entry point for your algorithm. Each new data point will be pumped in here.
