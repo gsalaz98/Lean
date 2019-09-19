@@ -51,6 +51,41 @@ namespace QuantConnect.Tests.Common
         }
 
         [Test]
+        public void SymbolCreateBaseWithNoUnderlying()
+        {
+            var symbol = Symbol.CreateBase(typeof(BaseData), "AAPL", Market.USA, mapSymbol: false);
+
+            Assert.IsTrue(symbol.SecurityType == SecurityType.Base);
+            Assert.IsFalse(symbol.HasUnderlying);
+        }
+
+        [Test]
+        public void SymbolCreateBaseWithUnderlyingEquity()
+        {
+            var equitySymbol = Symbol.Create("AAPL", SecurityType.Equity, Market.USA);
+            var symbol = Symbol.CreateBase(typeof(BaseData), "AAPL", Market.USA, mapSymbol: true, underlying: equitySymbol);
+
+            Assert.IsTrue(symbol.SecurityType == SecurityType.Base);
+            Assert.IsTrue(symbol.HasUnderlying);
+
+            Assert.AreEqual(symbol.Underlying, equitySymbol);
+        }
+
+        [Test]
+        public void SymbolCreateBaseWithUnderlyingOption()
+        {
+            var optionSymbol = Symbol.CreateOption("AAPL", Market.USA, OptionStyle.American, OptionRight.Call, 100, new DateTime(2050, 12, 31));
+            var symbol = Symbol.CreateBase(typeof(BaseData), "AAPL", Market.USA, mapSymbol: true, underlying: optionSymbol);
+
+            Assert.IsTrue(symbol.SecurityType == SecurityType.Base);
+            Assert.IsTrue(symbol.HasUnderlying);
+
+            Assert.AreEqual(symbol.Underlying, optionSymbol);
+            Assert.IsTrue(symbol.Underlying.HasUnderlying);
+            Assert.AreEqual(symbol.Underlying.Underlying.SecurityType, SecurityType.Equity);
+        }
+
+        [Test]
         public void SymbolCreateWithOptionSecurityTypeCreatesCanonicalOptionSymbol()
         {
             var symbol = Symbol.Create("SPY", SecurityType.Option, Market.USA);

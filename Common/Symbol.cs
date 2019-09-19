@@ -87,6 +87,21 @@ namespace QuantConnect
         }
 
         /// <summary>
+        /// Creates a new Symbol for custom data
+        /// </summary>
+        /// <param name="baseType">Type of BaseData instance</param>
+        /// <param name="ticker">Ticker of the data</param>
+        /// <param name="market">Market</param>
+        /// <param name="mapSymbol">Indicates whether we should map the symbol</param>
+        /// <param name="underlying">Underlying symbol to chain to custom data</param>
+        /// <returns>New symbol that can contain an underlying</returns>
+        public static Symbol CreateBase(Type baseType, string ticker, string market, bool mapSymbol = false, Symbol underlying = null)
+        {
+            var sid = SecurityIdentifier.GenerateBase(baseType, ticker, market, mapSymbol);
+            return new Symbol(sid, ticker, underlying);
+        }
+
+        /// <summary>
         /// Provides a convenience method for creating an option Symbol.
         /// </summary>
         /// <param name="underlying">The underlying ticker</param>
