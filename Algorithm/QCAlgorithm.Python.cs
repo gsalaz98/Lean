@@ -87,8 +87,29 @@ namespace QuantConnect.Algorithm
         /// <returns>The new <see cref="Security"/></returns>
         public Security AddData(Type dataType, string ticker, Resolution resolution, DateTimeZone timeZone, bool fillDataForward = false, decimal leverage = 1.0m)
         {
+            Symbol underlying;
+            if (!SymbolCache.TryGetSymbol(ticker, out underlying))
+            {
+                return AddData(dataType, (Symbol)ticker, resolution, timeZone, fillDataForward, leverage);
+            }
+
+            return AddData(dataType, underlying, resolution, timeZone, fillDataForward, leverage);
+        }
+
+        /// <summary>
+        /// AddData a new user defined data source, requiring only the minimum config options.
+        /// </summary>
+        /// <param name="dataType">Data source type</param>
+        /// <param name="symbol">Symbol object to set as underlying and use as ticker as of that date</param>
+        /// <param name="resolution">Resolution of the Data Required</param>
+        /// <param name="timeZone">Specifies the time zone of the raw data</param>
+        /// <param name="fillDataForward">When no data available on a tradebar, return the last data that was generated</param>
+        /// <param name="leverage">Custom leverage per security</param>
+        /// <returns>The new <see cref="Security"/></returns>
+        public Security AddData(Type dataType, Symbol underlying, Resolution resolution, DateTimeZone timeZone, bool fillDataForward = false, decimal leverage = 1.0m)
+        {
             //Add this to the data-feed subscriptions
-            var symbol = new Symbol(SecurityIdentifier.GenerateBase(dataType, ticker, Market.USA, dataType.GetBaseDataInstance().RequiresMapping()), ticker);
+            var symbol = QuantConnect.Symbol.CreateBase(dataType, underlying, Market.USA);
 
             var alias = symbol.ID.Symbol;
             SymbolCache.Set(alias, symbol);
