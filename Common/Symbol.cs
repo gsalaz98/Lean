@@ -474,6 +474,7 @@ namespace QuantConnect
             SecurityIdentifier sid;
             if (SecurityIdentifier.TryParse(ticker, out sid))
             {
+                Logging.Log.Trace($"Lifted ticker {ticker} - {sid.Symbol}");
                 return new Symbol(sid, sid.Symbol);
             }
 
