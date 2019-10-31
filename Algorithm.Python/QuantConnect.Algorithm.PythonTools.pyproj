@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>4a5ded1f-3e34-40e2-b1f2-9a8a02195508</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <TargetFramework>netcoreapp2.2</TargetFramework>
+    <TargetFramework>netcoreapp3.0</TargetFramework>
     <StartupFile>
     </StartupFile>
     <SearchPath>

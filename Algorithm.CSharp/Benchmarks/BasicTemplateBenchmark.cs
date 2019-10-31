@@ -30,7 +30,7 @@ namespace QuantConnect.Algorithm.CSharp.Benchmarks
             SetStartDate(2000, 01, 01);
             SetEndDate(2017, 01, 01);
             SetBenchmark(dt => 1m);
-            AddEquity("SPY");
+            AddEquity("SPY", Resolution.Tick);
         }
 
         public override void OnData(Slice data)

@@ -37,9 +37,9 @@
     <Reference Include="ikvm">
       <HintPath>..\packages\IKVM-WithExes.7.3.4830.1\tools\ikvm.exe</HintPath>
     </Reference>
-    <Reference Include="IKVM.AWT.WinForms">
+    <!--<Reference Include="IKVM.AWT.WinForms">
       <HintPath>..\packages\IKVM-WithExes.7.3.4830.1\tools\IKVM.AWT.WinForms.dll</HintPath>
-    </Reference>
+    </Reference>-->
     <Reference Include="IKVM.OpenJDK.Beans">
       <HintPath>..\packages\IKVM-WithExes.7.3.4830.1\tools\IKVM.OpenJDK.Beans.dll</HintPath>
     </Reference>
