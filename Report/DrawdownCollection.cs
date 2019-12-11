@@ -112,6 +112,11 @@ namespace QuantConnect.Report
         /// <returns></returns>
         public static Series<DateTime, double> GetUnderwater(Series<DateTime, double> curve)
         {
+            if (curve.IsEmpty)
+            {
+                return curve;
+            }
+
             var returns = curve / curve.FirstValue();
             var cumulativeMax = Calculations.CumulativeMax(returns);
 
