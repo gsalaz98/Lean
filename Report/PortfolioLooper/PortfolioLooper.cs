@@ -48,7 +48,7 @@ namespace QuantConnect.Report
 
         private SecurityService _securityService;
         private DataManager _dataManager;
-        private IEnumerable<Slice> _conversionSlices;
+        private IEnumerable<Slice> _conversionSlices = new List<Slice>();
 
         /// <summary>
         /// QCAlgorithm derived class that sets up internal data feeds for
@@ -266,6 +266,7 @@ namespace QuantConnect.Report
                 previousOrderId = order.Id;
             }
 
+            PointInTimePortfolio prev = null;
             foreach (var deploymentOrders in portfolioDeployments)
             {
                 // For every deployment, we want to start fresh.
@@ -276,8 +277,14 @@ namespace QuantConnect.Report
 
                 foreach (var portfolio in looper.ProcessOrders(deploymentOrders))
                 {
+                    prev = portfolio;
                     yield return portfolio;
                 }
+            }
+
+            if (prev != null)
+            {
+                yield return new PointInTimePortfolio(prev, equityCurve.LastKey());
             }
         }
 
@@ -289,7 +296,7 @@ namespace QuantConnect.Report
         private IEnumerable<PointInTimePortfolio> ProcessOrders(IEnumerable<Order> orders)
         {
             // Portfolio.ProcessFill(...) does not filter out invalid orders. We must do so ourselves
-            foreach (var order in orders.Where(x => x.Status != OrderStatus.Invalid))
+            foreach (var order in orders.Where(x => x.Status != OrderStatus.Canceled))
             {
                 var orderSecurity = Algorithm.Securities[order.Symbol];
                 var tick = new Tick { Quantity = order.Quantity, AskPrice = order.Price, BidPrice = order.Price, Value = order.Price };
@@ -327,9 +334,17 @@ namespace QuantConnect.Report
 
                 // Make sure to manually set the FillPrice and FillQuantity since constructor doesn't do it by default
                 var orderEvent = new OrderEvent(order, order.Time, Orders.Fees.OrderFee.Zero) { FillPrice = order.Price, FillQuantity = order.Quantity };
+                var previousPortfolioValue = Algorithm.Portfolio.TotalPortfolioValue;
 
                 // Process the order
                 Algorithm.Portfolio.ProcessFill(orderEvent);
+
+                var percentChanged = Math.Abs(previousPortfolioValue - Algorithm.Portfolio.TotalPortfolioValue) / Algorithm.Portfolio.TotalPortfolioValue;
+                if (percentChanged > 0.01m || percentChanged < -0.01m)
+                {
+                    var inverseOrderEvent = new OrderEvent(order, order.Time, Orders.Fees.OrderFee.Zero) { FillPrice = order.Price, FillQuantity = -order.Quantity };
+                    Algorithm.Portfolio.ProcessFill(inverseOrderEvent);
+                }
 
                 // Create portfolio statistics and return back to the user
                 yield return new PointInTimePortfolio(order, Algorithm.Portfolio);
