@@ -194,24 +194,13 @@ namespace QuantConnect.Lean.Engine
                 var time = timeSlice.Time;
                 DataPoints += timeSlice.DataPointCount;
 
-                SamplePerformance(results, time);
+                // We need to sample at the top of the loop in case we have a strategy
+                // with no data added. Time pulses would be emitted between days, and
+                // would cause us to skip sampling of the portfolio in those dead days.
+                results.Sample(time);
 
-                //If we're in backtest mode we need to capture the daily performance. We do this here directly
-                //before updating the algorithm state with the new data from this time step, otherwise we'll
-                //produce incorrect samples (they'll take into account this time step's new price values)
                 if (backtestMode)
                 {
-                    //On day-change sample equity and daily performance for statistics calculations
-                    if (_previousTime.Date != time.Date)
-                    {
-                        SampleBenchmark(results, _previousTime.Date);
-
-                        var currentPortfolioValue = algorithm.Portfolio.TotalPortfolioValue;
-
-                        //Sample the portfolio value over time for chart.
-                        results.SampleEquity(_previousTime, Math.Round(currentPortfolioValue, 4));
-                    }
-
                     if (_dailyPortfolioValue <= 0)
                     {
                         var logMessage = "AlgorithmManager.Run(): Portfolio value is less than or equal to zero, stopping algorithm.";
@@ -219,20 +208,10 @@ namespace QuantConnect.Lean.Engine
                         results.SystemDebugMessage(logMessage);
                         break;
                     }
-                }
-                else
-                {
-                    // live mode continously sample the benchmark
-                    SampleBenchmark(results, time);
-                }
 
-                //Update algorithm state after capturing performance from previous day
-
-                // If backtesting, we need to check if there are realtime events in the past
-                // which didn't fire because at the scheduled times there was no data (i.e. markets closed)
-                // and fire them with the correct date/time.
-                if (backtestMode)
-                {
+                    // If backtesting, we need to check if there are realtime events in the past
+                    // which didn't fire because at the scheduled times there was no data (i.e. markets closed)
+                    // and fire them with the correct date/time.
                     realtime.ScanPastEvents(time);
                 }
 
@@ -729,9 +708,8 @@ namespace QuantConnect.Lean.Engine
 
             //Take final samples:
             results.SampleRange(algorithm.GetChartUpdates());
-            results.SampleEquity(_previousTime, Math.Round(algorithm.Portfolio.TotalPortfolioValue, 4));
-            SampleBenchmark(results, backtestMode ? _previousTime.Date : _previousTime);
-            SamplePerformance(results, _previousTime.Date, force:true);
+            results.Sample(_previousTime, force: true);
+
         } // End of Run();
 
         /// <summary>
@@ -1209,50 +1187,6 @@ namespace QuantConnect.Lean.Engine
 
                 // remove the warning from out list
                 splitWarnings.RemoveAt(i);
-            }
-        }
-
-        /// <summary>
-        /// Samples the benchmark in a  try/catch block
-        /// </summary>
-        private void SampleBenchmark(IResultHandler results, DateTime time)
-        {
-            try
-            {
-                // backtest mode, sample benchmark on day changes
-                results.SampleBenchmark(time, _algorithm.Benchmark.Evaluate(time).SmartRounding());
-            }
-            catch (Exception err)
-            {
-                _algorithm.RunTimeError = err;
-                _algorithm.Status = AlgorithmStatus.RuntimeError;
-                Log.Error(err);
-            }
-        }
-
-        /// <summary>
-        /// Samples the performance in a  try/catch block and update the <see cref="_dailyPortfolioValue"/>
-        /// </summary>
-        private void SamplePerformance(IResultHandler results, DateTime time, bool force = false)
-        {
-            try
-            {
-                if (_previousTime.Date != time.Date || force)
-                {
-                    var currentPortfolioValue = _algorithm.Portfolio.TotalPortfolioValue;
-
-                    results.SamplePerformance(_previousTime.Date, _dailyPortfolioValue == 0m ? 0
-                        : Math.Round((currentPortfolioValue - _dailyPortfolioValue) * 100 / _dailyPortfolioValue, 10));
-
-                    // update daily portfolio value
-                    _dailyPortfolioValue = currentPortfolioValue;
-                }
-            }
-            catch (Exception err)
-            {
-                _algorithm.RunTimeError = err;
-                _algorithm.Status = AlgorithmStatus.RuntimeError;
-                Log.Error(err);
             }
         }
 

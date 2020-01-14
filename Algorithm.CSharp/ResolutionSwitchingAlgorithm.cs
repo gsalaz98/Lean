@@ -14,10 +14,9 @@
 */
 
 using System;
-using System.Linq;
 using QuantConnect.Data;
+using QuantConnect.Data.Consolidators;
 using QuantConnect.Data.UniverseSelection;
-using QuantConnect.Securities;
 using QuantConnect.Statistics;
 
 namespace QuantConnect.Algorithm.CSharp
@@ -31,7 +30,7 @@ namespace QuantConnect.Algorithm.CSharp
     /// -=-=-= WARNING =-=-=-
     ///
     /// if you are a user of the platform looking for how to switch the resolution of a symbol, we recommend
-    /// you add data in a high resolution (i.e. minute, second) and use a <see cref="Consolidator"/> to aggregate the
+    /// you add data in a high resolution (i.e. minute, second) and use a <see cref="TradeBarConsolidator"/> to aggregate the
     /// data to your desired resolution.
     ///
     /// This algorithm exists to test the internals of LEAN, and should not be used in any algorithm.
