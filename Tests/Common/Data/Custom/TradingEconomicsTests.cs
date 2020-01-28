@@ -61,6 +61,10 @@ namespace QuantConnect.Tests.Common.Data.Custom
         [TestCase("GDP PPI", "gdp producer price index")]
         [TestCase("GDP PPI 1st EsT", "gdp producer price index first estimate")]
         [TestCase("G.d.P. P.P.I. 1st EsT .... n.s.a", "gdp producer price index first estimate not seasonally adjusted")]
+        [TestCase("GDP Growth Rate 2014", "gdp growth rate")]
+        [TestCase("GDP Growth Rate 2015", "gdp growth rate")]
+        [TestCase("GDP Westpac Growth", "westpac gdp growth")]
+        [TestCase("Westpac GDP Growth", "westpac gdp growth")]
         public void CalendarFilterAppliedCorrectly(string eventName, string expected)
         {
             var filteredName = TradingEconomicsEventFilter.FilterEvent(eventName);

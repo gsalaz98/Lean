@@ -278,6 +278,7 @@
     <Compile Include="Data\Custom\Tiingo\TiingoNews.cs" />
     <Compile Include="Data\Custom\Tiingo\TiingoNewsJsonConverter.cs" />
     <Compile Include="Data\Custom\Tiingo\TiingoSymbolMapper.cs" />
+    <Compile Include="Data\Custom\TradingEconomics\TradingEconomicsEvent.cs" />
     <Compile Include="Data\Custom\TradingEconomics\TradingEconomics.cs" />
     <Compile Include="Data\Custom\TradingEconomics\TradingEconomicsEarnings.cs" />
     <Compile Include="Data\Custom\TradingEconomics\TradingEconomicsEventFilter.cs" />
