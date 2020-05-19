@@ -1,11 +1,11 @@
 /*
  * QUANTCONNECT.COM - Democratizing Finance, Empowering Individuals.
  * Lean Algorithmic Trading Engine v2.0. Copyright 2014 QuantConnect Corporation.
- * 
- * Licensed under the Apache License, Version 2.0 (the "License"); 
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -13,6 +13,7 @@
  * limitations under the License.
 */
 
+using ProtoBuf;
 using System;
 
 namespace QuantConnect.Data.Market
@@ -20,6 +21,7 @@ namespace QuantConnect.Data.Market
     /// <summary>
     /// Represents a bar sectioned not by time, but by some amount of movement in a value (for example, Closing price moving in $10 bar sizes)
     /// </summary>
+    [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
     public class RenkoBar : BaseData, IBaseDataBar
     {
         /// <summary>
@@ -132,7 +134,7 @@ namespace QuantConnect.Data.Market
         /// <param name="brickSize">The size of each renko brick</param>
         /// <param name="open">The opening price for the new bar</param>
         /// <param name="volume">Any initial volume associated with the data</param>
-        public RenkoBar(Symbol symbol, DateTime time, decimal brickSize, 
+        public RenkoBar(Symbol symbol, DateTime time, decimal brickSize,
             decimal open, decimal volume)
         {
             Type = RenkoType.Classic;

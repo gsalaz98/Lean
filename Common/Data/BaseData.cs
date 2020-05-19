@@ -19,6 +19,14 @@ using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
 using NodaTime;
+using ProtoBuf;
+using QuantConnect.Data.Auxiliary;
+using QuantConnect.Data.Custom.Benzinga;
+using QuantConnect.Data.Custom.CBOE;
+using QuantConnect.Data.Custom.Estimize;
+using QuantConnect.Data.Custom.Fred;
+using QuantConnect.Data.Custom.SEC;
+using QuantConnect.Data.Market;
 using QuantConnect.Util;
 
 namespace QuantConnect.Data
@@ -27,6 +35,30 @@ namespace QuantConnect.Data
     /// Abstract base data class of QuantConnect. It is intended to be extended to define
     /// generic user customizable data types while at the same time implementing the basics of data where possible
     /// </summary>
+    [ProtoContract(ImplicitFields = ImplicitFields.AllPublic, IgnoreListHandling = true)]
+    [ProtoInclude(200, typeof(TradeBar))]
+    [ProtoInclude(201, typeof(QuoteBar))]
+    [ProtoInclude(202, typeof(Tick))]
+    //[ProtoInclude(203, typeof(SymbolChangedEvent))]
+    //[ProtoInclude(204, typeof(Split))]
+    //[ProtoInclude(205, typeof(RenkoBar))]
+    //[ProtoInclude(206, typeof(OptionChain))]
+    //[ProtoInclude(207, typeof(OpenInterest))]
+    //[ProtoInclude(208, typeof(FuturesChain))]
+    //[ProtoInclude(209, typeof(Dividend))]
+    //[ProtoInclude(210, typeof(Delisting))]
+    //[ProtoInclude(211, typeof(DynamicData))]
+    //[ProtoInclude(212, typeof(ZipEntryName))]
+    //[ProtoInclude(213, typeof(BenzingaNews))]
+    //[ProtoInclude(214, typeof(CBOE))]
+    //[ProtoInclude(215, typeof(EstimizeConsensus))]
+    //[ProtoInclude(216, typeof(EstimizeEstimate))]
+    //[ProtoInclude(217, typeof(EstimizeRelease))]
+    //[ProtoInclude(218, typeof(Fred))]
+    //[ProtoInclude(219, typeof(SECReport8K))]
+    //[ProtoInclude(220, typeof(SECReport10K))]
+    //[ProtoInclude(221, typeof(SECReport10Q))]
+    // TODO: Finish adding the rest of the inherited definitions
     public abstract class BaseData : IBaseData
     {
         private decimal _value;
@@ -34,17 +66,20 @@ namespace QuantConnect.Data
         /// <summary>
         /// A list of all <see cref="Resolution"/>
         /// </summary>
+        [ProtoIgnore]
         protected static readonly List<Resolution> AllResolutions =
             Enum.GetValues(typeof(Resolution)).Cast<Resolution>().ToList();
 
         /// <summary>
         /// A list of <see cref="Resolution.Daily"/>
         /// </summary>
+        [ProtoIgnore]
         protected static readonly List<Resolution> DailyResolution = new List<Resolution> { Resolution.Daily };
 
         /// <summary>
         /// A list of <see cref="Resolution.Minute"/>
         /// </summary>
+        [ProtoIgnore]
         protected static readonly List<Resolution> MinuteResolution = new List<Resolution> { Resolution.Minute };
 
         /// <summary>
@@ -98,6 +133,7 @@ namespace QuantConnect.Data
         /// <summary>
         /// As this is a backtesting platform we'll provide an alias of value as price.
         /// </summary>
+        [ProtoIgnore]
         public decimal Price => Value;
 
         /// <summary>
@@ -386,6 +422,7 @@ namespace QuantConnect.Data
             return Enumerable.Empty<BaseData>();
         }
 
+        [ProtoIgnore]
         private static readonly JsonSerializerSettings JsonSerializerSettings = new JsonSerializerSettings
         {
             TypeNameHandling = TypeNameHandling.All

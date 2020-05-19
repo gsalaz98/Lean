@@ -13,6 +13,7 @@
  * limitations under the License.
 */
 
+using ProtoBuf;
 using System;
 
 namespace QuantConnect.Data.Market
@@ -20,6 +21,7 @@ namespace QuantConnect.Data.Market
     /// <summary>
     /// Defines a single futures contract at a specific expiration
     /// </summary>
+    [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
     public class FuturesContract
     {
         /// <summary>

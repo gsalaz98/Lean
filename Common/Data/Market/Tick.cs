@@ -16,6 +16,7 @@
 using System;
 using System.Globalization;
 using System.IO;
+using ProtoBuf;
 using QuantConnect.Logging;
 using QuantConnect.Util;
 
@@ -25,6 +26,7 @@ namespace QuantConnect.Data.Market
     /// Tick class is the base representation for tick data. It is grouped into a Ticks object
     /// which implements IDictionary and passed into an OnData event handler.
     /// </summary>
+    [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
     public class Tick : BaseData
     {
         /// <summary>
@@ -67,6 +69,7 @@ namespace QuantConnect.Data.Market
         /// <summary>
         /// Alias for "Value" - the last sale for this asset.
         /// </summary>
+        [ProtoIgnore]
         public decimal LastPrice
         {
             get

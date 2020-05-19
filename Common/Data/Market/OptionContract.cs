@@ -14,6 +14,7 @@
 */
 
 using System;
+using ProtoBuf;
 using QuantConnect.Securities.Option;
 
 namespace QuantConnect.Data.Market
@@ -21,10 +22,11 @@ namespace QuantConnect.Data.Market
     /// <summary>
     /// Defines a single option contract at a specific expiration and strike price
     /// </summary>
+    [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
     public class OptionContract
     {
-        private Lazy<OptionPriceModelResult> _optionPriceModelResult = new Lazy<OptionPriceModelResult>(() => 
-                                                                            new OptionPriceModelResult(0m, new Greeks())); 
+        private Lazy<OptionPriceModelResult> _optionPriceModelResult = new Lazy<OptionPriceModelResult>(() =>
+                                                                            new OptionPriceModelResult(0m, new Greeks()));
 
         /// <summary>
         /// Gets the option contract's symbol

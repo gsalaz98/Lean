@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
+using ProtoBuf;
 using QuantConnect.Data.UniverseSelection;
 using static QuantConnect.StringExtensions;
 
@@ -29,6 +30,7 @@ namespace QuantConnect.Data.Custom.SEC
     /// If the ticker you want no longer trades, you can also use the CIK of the company
     /// you want data for as well except for currently traded stocks. This may change in the future.
     /// </summary>
+    [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
     public class SECReport10K : BaseData, ISECReport
     {
         /// <summary>

@@ -17,6 +17,7 @@ using System;
 using System.Globalization;
 using System.IO;
 using System.Threading;
+using ProtoBuf;
 using QuantConnect.Logging;
 using QuantConnect.Util;
 using static QuantConnect.StringExtensions;
@@ -27,6 +28,7 @@ namespace QuantConnect.Data.Market
     /// TradeBar class for second and minute resolution data:
     /// An OHLC implementation of the QuantConnect BaseData class with parameters for candles.
     /// </summary>
+    [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
     public class TradeBar : BaseData, IBaseDataBar
     {
         // scale factor used in QC equity/forex data files

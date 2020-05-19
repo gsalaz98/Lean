@@ -16,6 +16,7 @@
 
 using System;
 using Newtonsoft.Json;
+using ProtoBuf;
 using QuantConnect.Orders;
 
 namespace QuantConnect.Data.Market
@@ -23,6 +24,7 @@ namespace QuantConnect.Data.Market
     /// <summary>
     /// Delisting event of a security
     /// </summary>
+    [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
     public class Delisting : BaseData
     {
         /// <summary>

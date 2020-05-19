@@ -17,6 +17,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using ProtoBuf;
 using QuantConnect.Securities.Future;
 using QuantConnect.Util;
 
@@ -26,6 +27,7 @@ namespace QuantConnect.Data.Market
     /// Represents an entire chain of futures contracts for a single underlying
     /// This type is <see cref="IEnumerable{FuturesContract}"/>
     /// </summary>
+    [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
     public class FuturesChain : BaseData, IEnumerable<FuturesContract>
     {
         private readonly Dictionary<Type, Dictionary<Symbol, List<BaseData>>> _auxiliaryData = new Dictionary<Type, Dictionary<Symbol, List<BaseData>>>();

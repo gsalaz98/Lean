@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using Newtonsoft.Json;
+using ProtoBuf;
 using QuantConnect.Configuration;
 using QuantConnect.Data.UniverseSelection;
 using QuantConnect.Interfaces;
@@ -36,6 +37,7 @@ namespace QuantConnect
     /// This includes the symbol and other data specific to the SecurityType.
     /// The symbol is limited to 12 characters
     /// </remarks>
+    [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
     [JsonConverter(typeof(SecurityIdentifierJsonConverter))]
     public struct SecurityIdentifier : IEquatable<SecurityIdentifier>
     {
@@ -105,13 +107,21 @@ namespace QuantConnect
 
         #region Member variables
 
+        [ProtoMember(1)]
         private readonly string _symbol;
+        [ProtoMember(2)]
         private readonly ulong _properties;
+        [ProtoMember(3)]
         private readonly SidBox _underlying;
+        [ProtoMember(4)]
         private readonly int _hashCode;
+        [ProtoMember(5)]
         private decimal? _strikePrice;
+        [ProtoMember(6)]
         private OptionStyle? _optionStyle;
+        [ProtoMember(7)]
         private OptionRight? _optionRight;
+        [ProtoMember(8)]
         private DateTime? _date;
 
         #endregion
@@ -122,6 +132,7 @@ namespace QuantConnect
         /// Gets whether or not this <see cref="SecurityIdentifier"/> is a derivative,
         /// that is, it has a valid <see cref="Underlying"/> property
         /// </summary>
+        [ProtoIgnore]
         public bool HasUnderlying
         {
             get { return _underlying != null; }
@@ -131,6 +142,7 @@ namespace QuantConnect
         /// Gets the underlying security identifier for this security identifier. When there is
         /// no underlying, this property will return a value of <see cref="Empty"/>.
         /// </summary>
+        [ProtoIgnore]
         public SecurityIdentifier Underlying
         {
             get
@@ -151,6 +163,7 @@ namespace QuantConnect
         /// settlement date. For forex and cfds this property will throw an
         /// exception as the field is not specified.
         /// </summary>
+        [ProtoIgnore]
         public DateTime Date
         {
             get
@@ -175,6 +188,10 @@ namespace QuantConnect
                     }
                 }
             }
+            private set
+            {
+                _date = value;
+            }
         }
 
         /// <summary>
@@ -182,6 +199,7 @@ namespace QuantConnect
         /// For equities, by convention this is the first ticker symbol for which
         /// the security traded
         /// </summary>
+        [ProtoIgnore]
         public string Symbol
         {
             get { return _symbol; }
@@ -192,6 +210,7 @@ namespace QuantConnect
         /// internal mappings, the full string is returned. If the value is unknown,
         /// the integer value is returned as a string.
         /// </summary>
+        [ProtoIgnore]
         public string Market
         {
             get
@@ -207,12 +226,14 @@ namespace QuantConnect
         /// <summary>
         /// Gets the security type component of this security identifier.
         /// </summary>
-        public SecurityType SecurityType { get; }
+        [ProtoMember(9)]
+        public SecurityType SecurityType { get; private set; }
 
         /// <summary>
         /// Gets the option strike price. This only applies to SecurityType.Option
         /// and will thrown anexception if accessed otherwse.
         /// </summary>
+        [ProtoIgnore]
         public decimal StrikePrice
         {
             get
@@ -245,6 +266,7 @@ namespace QuantConnect
         /// only applies to SecurityType.Open and will throw an exception if
         /// accessed otherwise.
         /// </summary>
+        [ProtoIgnore]
         public OptionRight OptionRight
         {
             get
@@ -271,6 +293,7 @@ namespace QuantConnect
         /// only applies to SecurityType.Open and will throw an exception if
         /// accessed otherwise.
         /// </summary>
+        [ProtoIgnore]
         public OptionStyle OptionStyle
         {
             get
@@ -320,6 +343,7 @@ namespace QuantConnect
             _optionStyle = null;
             _optionRight = null;
             _date = null;
+
             SecurityType = (SecurityType)ExtractFromProperties(SecurityTypeOffset, SecurityTypeWidth, properties);
             if (!SecurityType.IsValid())
             {
@@ -894,6 +918,7 @@ namespace QuantConnect
         /// Provides a reference type container for a security identifier instance.
         /// This is used to maintain a reference to an underlying
         /// </summary>
+        [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
         private sealed class SidBox : IEquatable<SidBox>
         {
             public readonly SecurityIdentifier SecurityIdentifier;

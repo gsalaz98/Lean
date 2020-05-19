@@ -14,6 +14,7 @@
  *
 */
 
+using ProtoBuf;
 using System;
 using static QuantConnect.StringExtensions;
 
@@ -22,6 +23,7 @@ namespace QuantConnect.Data.Market
     /// <summary>
     /// Dividend event from a security
     /// </summary>
+    [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
     public class Dividend : BaseData
     {
         /// <summary>

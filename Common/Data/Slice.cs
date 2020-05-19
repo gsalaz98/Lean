@@ -18,6 +18,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using ProtoBuf;
 using QuantConnect.Data.Custom;
 using QuantConnect.Data.Market;
 using QuantConnect.Python;
@@ -27,6 +28,7 @@ namespace QuantConnect.Data
     /// <summary>
     /// Provides a data structure for all of an algorithm's data at a single time step
     /// </summary>
+    [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
     public class Slice : ExtendedDictionary<dynamic>, IEnumerable<KeyValuePair<Symbol, BaseData>>
     {
         private readonly Ticks _ticks;

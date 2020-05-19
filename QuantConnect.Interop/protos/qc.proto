@@ -1,0 +1,91 @@
+syntax = "proto3";
+import "bcl.proto"; // schema for protobuf-net's handling of core .NET types
+
+message BaseData {
+   MarketDataType DataType = 1;
+   .bcl.DateTime EndTime = 2;
+   bool IsFillForward = 3;
+   Symbol Symbol = 4;
+   .bcl.DateTime Time = 5;
+   .bcl.Decimal Value = 6;
+   oneof subtype {
+      TradeBar TradeBar = 200;
+      Tick Tick = 202;
+   }
+}
+message List_BaseData {
+   repeated BaseData items = 1;
+}
+enum MarketDataType {
+   BaseType = 0;
+   TradeBarType = 1;
+   TickTypeType = 2;
+   AuxiliaryType = 3;
+   QuoteBarType = 4;
+   OptionChainType = 5;
+   FuturesChainType = 6;
+}
+enum OptionRight {
+   Call = 0;
+   Put = 1;
+}
+enum OptionStyle {
+   American = 0;
+   European = 1;
+}
+message SecurityIdentifier {
+   string _symbol = 1;
+   uint64 _properties = 2;
+   SidBox _underlying = 3;
+   int32 _hashCode = 4;
+   .bcl.Decimal _strikePrice = 5;
+   OptionStyle _optionStyle = 6;
+   OptionRight _optionRight = 7;
+   .bcl.DateTime _date = 8;
+   SecurityType SecurityType = 9;
+}
+enum SecurityType {
+   Base = 0;
+   Equity = 1;
+   Option = 2;
+   Commodity = 3;
+   Forex = 4;
+   Future = 5;
+   Cfd = 6;
+   Crypto = 7;
+}
+message SidBox {
+   SecurityIdentifier SecurityIdentifier = 1;
+}
+message Symbol {
+   bool HasUnderlying = 1;
+   SecurityIdentifier ID = 2;
+   SecurityType SecurityType = 3;
+   Symbol Underlying = 4;
+   string Value = 5;
+}
+message Tick {
+   .bcl.Decimal AskPrice = 1;
+   .bcl.Decimal AskSize = 2;
+   .bcl.Decimal BidPrice = 3;
+   .bcl.Decimal BidSize = 4;
+   string Exchange = 5;
+   .bcl.Decimal Quantity = 6;
+   string SaleCondition = 7;
+   bool Suspicious = 8;
+   TickType TickType = 9;
+}
+enum TickType {
+   Trade = 0;
+   Quote = 1;
+   OpenInterest = 2;
+}
+message TradeBar {
+   .bcl.Decimal Close = 1;
+   .bcl.DateTime EndTime = 2;
+   .bcl.Decimal High = 3;
+   .bcl.Decimal Low = 4;
+   .bcl.Decimal Open = 5;
+   .bcl.TimeSpan Period = 6;
+   .bcl.Decimal Volume = 7;
+}

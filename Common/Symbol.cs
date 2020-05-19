@@ -15,7 +15,9 @@
 */
 
 using System;
+using System.Runtime.Serialization;
 using Newtonsoft.Json;
+using ProtoBuf;
 using static QuantConnect.StringExtensions;
 
 namespace QuantConnect
@@ -25,6 +27,8 @@ namespace QuantConnect
     /// the unique SID and the Value. The value is the current ticker symbol while
     /// the SID is constant over the life of a security
     /// </summary>
+    [DataContract]
+    [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
     [JsonConverter(typeof(SymbolJsonConverter))]
     public sealed class Symbol : IEquatable<Symbol>, IComparable
     {
@@ -41,6 +45,13 @@ namespace QuantConnect
         /// Represents no symbol. This is intended to be used when no symbol is explicitly intended
         /// </summary>
         public static readonly Symbol None = new Symbol(SecurityIdentifier.None, "NONE");
+
+        /// <summary>
+        /// Used for protobuf serialization
+        /// </summary>
+        private Symbol()
+        {
+        }
 
         /// <summary>
         /// Provides a convenience method for creating a Symbol for most security types.
@@ -252,13 +263,15 @@ namespace QuantConnect
         public bool HasUnderlying
         {
             get { return !ReferenceEquals(Underlying, null); }
+            set { _tmpUnderlying = value; }
         }
+
+        private bool _tmpUnderlying;
 
         /// <summary>
         /// Gets the security underlying symbol, if any
         /// </summary>
         public Symbol Underlying { get; private set; }
-
 
         /// <summary>
         /// Gets the security type of the symbol
@@ -266,8 +279,10 @@ namespace QuantConnect
         public SecurityType SecurityType
         {
             get { return ID.SecurityType; }
+            set { _tmpSecurityType = value; }
         }
 
+        private SecurityType _tmpSecurityType;
 
         #endregion
 

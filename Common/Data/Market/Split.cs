@@ -16,6 +16,7 @@
 
 using System;
 using Newtonsoft.Json;
+using ProtoBuf;
 using static QuantConnect.StringExtensions;
 
 namespace QuantConnect.Data.Market
@@ -23,6 +24,7 @@ namespace QuantConnect.Data.Market
     /// <summary>
     /// Split event from a security
     /// </summary>
+    [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
     public class Split : BaseData
     {
         /// <summary>

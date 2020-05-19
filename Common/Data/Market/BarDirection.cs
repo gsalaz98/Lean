@@ -13,8 +13,11 @@
  * limitations under the License.
 */
 
+using ProtoBuf;
+
 namespace QuantConnect.Data.Market
 {
+    [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
     public enum BarDirection
     {
         Rising,

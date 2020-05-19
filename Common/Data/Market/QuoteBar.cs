@@ -16,6 +16,7 @@
 using System;
 using System.Globalization;
 using System.IO;
+using ProtoBuf;
 using QuantConnect.Logging;
 using QuantConnect.Util;
 using static QuantConnect.StringExtensions;
@@ -26,6 +27,7 @@ namespace QuantConnect.Data.Market
     /// QuoteBar class for second and minute resolution data:
     /// An OHLC implementation of the QuantConnect BaseData class with parameters for candles.
     /// </summary>
+    [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
     public class QuoteBar : BaseData, IBaseDataBar
     {
         // scale factor used in QC equity/forex data files
@@ -54,6 +56,7 @@ namespace QuantConnect.Data.Market
         /// <summary>
         /// Opening price of the bar: Defined as the price at the start of the time period.
         /// </summary>
+        [ProtoIgnore]
         public decimal Open
         {
             get
@@ -86,6 +89,7 @@ namespace QuantConnect.Data.Market
         /// <summary>
         /// High price of the QuoteBar during the time period.
         /// </summary>
+        [ProtoIgnore]
         public decimal High
         {
             get
@@ -118,6 +122,7 @@ namespace QuantConnect.Data.Market
         /// <summary>
         /// Low price of the QuoteBar during the time period.
         /// </summary>
+        [ProtoIgnore]
         public decimal Low
         {
             get
@@ -150,6 +155,7 @@ namespace QuantConnect.Data.Market
         /// <summary>
         /// Closing price of the QuoteBar. Defined as the price at Start Time + TimeSpan.
         /// </summary>
+        [ProtoIgnore]
         public decimal Close
         {
             get

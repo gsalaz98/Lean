@@ -1,11 +1,11 @@
 ﻿/*
  * QUANTCONNECT.COM - Democratizing Finance, Empowering Individuals.
  * Lean Algorithmic Trading Engine v2.0. Copyright 2014 QuantConnect Corporation.
- * 
- * Licensed under the Apache License, Version 2.0 (the "License"); 
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,9 +16,11 @@
 using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using ProtoBuf;
 
 namespace QuantConnect.Data.Custom.SEC
 {
+    [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
     public class SECReportIndexFile
     {
         /// <summary>
@@ -28,6 +30,7 @@ namespace QuantConnect.Data.Custom.SEC
         public SECReportIndexDirectory Directory;
     }
 
+    [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
     public class SECReportIndexDirectory
     {
         /// <summary>
@@ -35,13 +38,13 @@ namespace QuantConnect.Data.Custom.SEC
         /// </summary>
         [JsonProperty("item")]
         public List<SECReportIndexItem> Items;
-        
+
         /// <summary>
         /// Path directory
         /// </summary>
         [JsonProperty("name")]
         public string Name;
-        
+
         /// <summary>
         /// Parent directory (if one exists)
         /// </summary>
@@ -56,19 +59,19 @@ namespace QuantConnect.Data.Custom.SEC
         /// </summary>
         [JsonProperty("last-modified")]
         public DateTime LastModified;
-        
+
         /// <summary>
         /// Name of folder/file. Usually accession number
         /// </summary>
         [JsonProperty("name")]
         public string Name;
-        
+
         /// <summary>
         /// Specifies what kind of file the entry is
         /// </summary>
         [JsonProperty("type")]
         public string FileType;
-        
+
         /// <summary>
         /// Size of the file. Empty if directory
         /// </summary>

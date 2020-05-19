@@ -46,6 +46,7 @@ using QuantConnect.Algorithm.Framework.Portfolio;
 using QuantConnect.Algorithm.Framework.Risk;
 using QuantConnect.Algorithm.Framework.Selection;
 using QuantConnect.Storage;
+using ProtoBuf;
 
 namespace QuantConnect.Algorithm
 {

@@ -13,6 +13,7 @@
  * limitations under the License.
 */
 
+using ProtoBuf;
 using System.Threading;
 
 namespace QuantConnect.Data.Market
@@ -20,6 +21,7 @@ namespace QuantConnect.Data.Market
     /// <summary>
     /// Base Bar Class: Open, High, Low, Close and Period.
     /// </summary>
+    [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
     public class Bar : IBar
     {
         /// <summary>

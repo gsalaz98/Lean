@@ -17,6 +17,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using ProtoBuf;
 using QuantConnect.Securities.Option;
 using QuantConnect.Util;
 
@@ -26,6 +27,7 @@ namespace QuantConnect.Data.Market
     /// Represents an entire chain of option contracts for a single underying security.
     /// This type is <see cref="IEnumerable{OptionContract}"/>
     /// </summary>
+    [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
     public class OptionChain : BaseData, IEnumerable<OptionContract>
     {
         private readonly Dictionary<Type, Dictionary<Symbol, List<BaseData>>> _auxiliaryData = new Dictionary<Type, Dictionary<Symbol, List<BaseData>>>();
