@@ -2,13 +2,6 @@
 #include <iostream>
 #include "QCAlgorithm.hpp"
 
-double to_double(bcl::Decimal rhs) {
-    return to_f64(
-        rhs.lo(),
-        rhs.hi(),
-        rhs.signscale());
-}
-
 std::string encode_base_36(unsigned long long data) {
     std::vector<char> stack;
     while (data != 0) {
@@ -37,26 +30,24 @@ void QCAlgorithm::Initialize(QCAlgorithmFunctions* self) {
     std::cout << "Hello from C++" << std::endl;
 }
 
-void QCAlgorithm::OnData(QCAlgorithmFunctions* self, google::protobuf::RepeatedPtrField<BaseData> data) {
-    for (auto it = data.begin(); it != data.end(); ++it) {
-        if (it->has_tradebar()) {
-            auto tb = it->tradebar();
-            auto o = std::to_string(to_double(tb.open()));
-            auto h = std::to_string(to_double(tb.high()));
-            auto l = std::to_string(to_double(tb.low()));
-            auto c = std::to_string(to_double(tb.close()));
-            auto v = std::to_string(to_double(tb.volume()));
+void QCAlgorithm::OnData(QCAlgorithmFunctions* self, const BaseDataCollection* data) {
+    auto tradebars = data->TradeBars();
+    auto ticks = data->Ticks();
+    //for (auto it = tradebars->begin(); it != tradebars->end(); ++it) {
+    //    auto o = std::to_string(it->Open());
+    //    auto h = std::to_string(it->High());
+    //    auto l = std::to_string(it->Low());
+    //    auto c = std::to_string(it->Close());
+    //    auto v = std::to_string(it->Volume());
+    //    
+    //    std::cout << " O: " << o << " H :" << h << " L: " << l << " C: " << c << " V: " << v << std::endl;
+    //}
+    for (auto tick = ticks->begin(); tick != ticks->end(); ++tick) {
+        auto q = std::to_string(tick->Quantity());
+        auto p = std::to_string(tick->Value());
+        auto s = tick->Symbol();
+        auto time = tick->EndTime();
 
-            //std::cout << " O: " << o << " H :" << h << " L: " << l << " C: " << c << " V: " << v << std::endl;
-        }
-        if (it->has_tick()) {
-            auto t = it->tick();
-            auto q = std::to_string(to_double(t.quantity()));
-            auto p = std::to_string(to_double(it->value()));
-            auto s = it->symbol().id();
-            auto time = it->endtime();
-
-            std::cout << s._symbol() << " " << encode_base_36(s._properties()) << " - Price: " << p << " Qty: " << q << std::endl;
-        }
+        std::cout << s->Value()->str() << " " << encode_base_36(s->ID()->_properties()) << " - Price: " << p << " Qty: " << q << std::endl;
     }
 }

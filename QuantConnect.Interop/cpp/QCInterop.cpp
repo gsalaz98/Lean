@@ -16,15 +16,8 @@ extern "C" DLL_PUBLIC void Initialize(QCAlgorithm* algorithm, QCAlgorithmFunctio
 }
 
 extern "C" DLL_PUBLIC void OnData(QCAlgorithm* algorithm, QCAlgorithmFunctions* self, void* message, int length) {
-    List_BaseData data;
-    {
-        auto* input_stream = new google::protobuf::io::ArrayInputStream(message, length);
-        data.ParseFromZeroCopyStream(input_stream);
-        delete input_stream;
-    }
-
-    auto items = data.items();
-    algorithm->OnData(self, items);
+    //auto base_data = GetBaseDataCollection(message);
+    //algorithm->OnData(self, base_data);
 }
 
 extern "C" DLL_PUBLIC void finalize(QCAlgorithm* algorithm) {

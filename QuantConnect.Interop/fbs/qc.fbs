@@ -1,0 +1,100 @@
+enum MarketDataType : int {
+  Base = 0,
+  TradeBar = 1,
+  Tick = 2,
+  Auxiliary = 3,
+  QuoteBar = 4,
+  OptionChain = 5,
+  FuturesChain = 6,
+}
+
+enum OptionRight : int {
+  Call = 0,
+  Put = 1,
+}
+
+enum OptionStyle : int {
+  American = 0,
+  European = 1,
+}
+
+enum SecurityType : int {
+  Base = 0,
+  Equity = 1,
+  Option = 2,
+  Commodity = 3,
+  Forex = 4,
+  Future = 5,
+  Cfd = 6,
+  Crypto = 7,
+}
+
+enum TickType : int {
+  Trade = 0,
+  Quote = 1,
+  OpenInterest = 2,
+}
+
+table BaseDataCollection {
+  Ticks:[Tick];
+  TradeBars:[TradeBar];
+}
+
+table SecurityIdentifier {
+  _symbol:string;
+  _properties:ulong;
+  _underlying:SidBox;
+  _hashCode:int;
+  _strikePrice:double;
+  _optionStyle:OptionStyle;
+  _optionRight:OptionRight;
+  _date:long;
+  SecurityType:SecurityType;
+}
+
+table SidBox {
+  SecurityIdentifierInner:SecurityIdentifier;
+}
+
+table QCSymbol {
+  HasUnderlying:bool;
+  ID:SecurityIdentifier;
+  SecurityType:SecurityType;
+  Underlying:QCSymbol;
+  Value:string;
+}
+
+table Tick {
+  DataType:MarketDataType;
+  EndTime:long;
+  IsFillForward:bool;
+  Symbol:QCSymbol;
+  Time:long;
+  Value:double;
+  AskPrice:double;
+  AskSize:double;
+  BidPrice:double;
+  BidSize:double;
+  Exchange:string;
+  Quantity:double;
+  SaleCondition:string;
+  Suspicious:bool;
+  TickType:TickType;
+}
+
+table TradeBar {
+  DataType:MarketDataType;
+  EndTime:long;
+  IsFillForward:bool;
+  Symbol:QCSymbol;
+  Time:long;
+  Value:double;
+  Close:double;
+  High:double;
+  Low:double;
+  Open:double;
+  Period:long;
+  Volume:double;
+}
+
+root_type BaseDataCollection;
