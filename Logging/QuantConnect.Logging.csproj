@@ -93,6 +93,9 @@
     <Reference Include="NLog, Version=4.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
       <HintPath>..\packages\NLog.4.4.11\lib\net45\NLog.dll</HintPath>
     </Reference>
+    <Reference Include="QuantConnect.Common, Version=2.4.0.0, Culture=neutral, PublicKeyToken=null">
+      <HintPath>..\QuantConnect.Interop\bin\Debug\QuantConnect.Common.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Core" />
@@ -121,6 +124,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Log.cs" />
     <Compile Include="RegressionFileLogHandler.cs" />
+    <Compile Include="TUILogHandler.cs" />
     <Compile Include="WhoCalledMe.cs" />
   </ItemGroup>
   <ItemGroup>
