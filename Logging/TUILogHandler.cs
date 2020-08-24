@@ -25,7 +25,7 @@ namespace QuantConnect.Logging
         public static extern void error(IntPtr handle, string msg);
 
         [DllImport("lean_tui.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern void update(IntPtr handle, BacktestResultPacket backtestResult);
+        public static extern void update(IntPtr handle, string backtestResult);
 
         [DllImport("lean_tui.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern void free(IntPtr handle);
@@ -45,7 +45,7 @@ namespace QuantConnect.Logging
             _tuiHandle = initialize(_dateFormat);
         }
 
-        public void Update(BacktestResultPacket packet)
+        public void Update(string packet)
         {
             update(_tuiHandle, packet);
         }

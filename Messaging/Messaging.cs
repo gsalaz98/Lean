@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using Newtonsoft.Json;
 using QuantConnect.Configuration;
 using QuantConnect.Interfaces;
 using QuantConnect.Logging;
@@ -37,6 +38,7 @@ namespace QuantConnect.Messaging
 
         private AlgorithmNodePacket _job;
         private OrderEventJsonConverter _orderEventJsonConverter;
+        private readonly bool _isTuiLogger = Log.LogHandler is TUILogHandler;
 
         /// <summary>
         /// This implementation ignores the <seealso cref="HasSubscribers"/> flag and
@@ -110,6 +112,12 @@ namespace QuantConnect.Messaging
 
                 case PacketType.BacktestResult:
                     var result = (BacktestResultPacket) packet;
+
+                    if (_isTuiLogger)
+                    {
+                        var handler = Log.LogHandler as TUILogHandler;
+                        handler.Update(JsonConvert.SerializeObject(packet));
+                    }
 
                     if (result.Progress == 1)
                     {
