@@ -1870,7 +1870,7 @@ namespace QuantConnect.Algorithm
                 parts.Add(symbol.ToString());
             }
             parts.Add(res);
-            
+
             return Invariant($"{type}({string.Join("_", parts)})").Replace(")(", ",");
         }
 

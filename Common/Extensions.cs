@@ -1980,7 +1980,7 @@ namespace QuantConnect
                 {
                     an = new AssemblyName(pyObject.Repr().Split('\'')[1]);
                 }
-                var typeBuilder = AppDomain.CurrentDomain
+                var typeBuilder = AssemblyBuilder
                     .DefineDynamicAssembly(an, AssemblyBuilderAccess.Run)
                     .DefineDynamicModule("MainModule")
                     .DefineType(an.Name, TypeAttributes.Class, type);

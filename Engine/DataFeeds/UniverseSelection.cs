@@ -24,10 +24,10 @@ using QuantConnect.Interfaces;
 using QuantConnect.Lean.Engine.DataFeeds.Enumerators.Factories;
 using QuantConnect.Logging;
 using QuantConnect.Securities;
-using QuantConnect.Util;
 using QuantConnect.Data.Fundamental;
 using QuantConnect.Securities.Future;
 using QuantConnect.Securities.Option;
+using QuantConnect.Util;
 
 namespace QuantConnect.Lean.Engine.DataFeeds
 {

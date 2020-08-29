@@ -21,7 +21,7 @@ using System.Linq;
 using QuantConnect.Algorithm.CSharp;
 using QuantConnect.Configuration;
 using QuantConnect.Interfaces;
-using QuantConnect.Util;
+//using QuantConnect.Util;
 
 namespace QuantConnect.Tests
 {
