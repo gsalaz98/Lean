@@ -338,6 +338,19 @@ namespace QuantConnect.Lean.Engine.Results
         }
 
         /// <summary>
+        /// Sends a generated packet to the messaging handler
+        /// </summary>
+        /// <param name="packet">Packet to send</param>
+        /// <remarks>
+        /// This method provides a way to get any generated results from the ResultHandler
+        /// and provide them to any consumers of this data.
+        /// </remarks>
+        protected virtual void SendPacket(Packet packet)
+        {
+            MessagingHandler.Send(packet);
+        }
+
+        /// <summary>
         /// Sets the current alpha runtime statistics
         /// </summary>
         /// <param name="statistics">The current alpha runtime statistics</param>

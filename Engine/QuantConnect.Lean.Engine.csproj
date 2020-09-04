@@ -301,6 +301,7 @@
     <Compile Include="RealTime\BaseRealTimeHandler.cs" />
     <Compile Include="Results\BaseResultsHandler.cs" />
     <Compile Include="Results\RegressionResultHandler.cs" />
+    <Compile Include="Results\TUIBacktestingResultHandler.cs" />
     <Compile Include="Server\LocalLeanManager.cs" />
     <Compile Include="HistoricalData\BrokerageHistoryProvider.cs" />
     <Compile Include="HistoricalData\SubscriptionDataReaderHistoryProvider.cs" />

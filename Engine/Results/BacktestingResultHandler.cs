@@ -117,7 +117,7 @@ namespace QuantConnect.Lean.Engine.Results
                         Packet packet;
                         if (Messages.TryDequeue(out packet))
                         {
-                            MessagingHandler.Send(packet);
+                            SendPacket(packet);
                         }
                     }
 
@@ -238,7 +238,7 @@ namespace QuantConnect.Lean.Engine.Results
 
                 foreach (var backtestingPacket in splitPackets)
                 {
-                    MessagingHandler.Send(backtestingPacket);
+                    SendPacket(backtestingPacket);
                 }
 
                 // let's re update this value after we finish just in case, so we don't re enter in the next loop
@@ -377,7 +377,7 @@ namespace QuantConnect.Lean.Engine.Results
                 StoreResult(result);
 
                 //Second, send the truncated packet:
-                MessagingHandler.Send(result);
+                SendPacket(result);
 
                 Log.Trace("BacktestingResultHandler.SendAnalysisResult(): Processed final packet");
             }
@@ -671,7 +671,7 @@ namespace QuantConnect.Lean.Engine.Results
         public virtual void SendStatusUpdate(AlgorithmStatus status, string message = "")
         {
             var statusPacket = new AlgorithmStatusPacket(_algorithmId, _projectId, status, message);
-            MessagingHandler.Send(statusPacket);
+            SendPacket(statusPacket);
         }
 
         /// <summary>
