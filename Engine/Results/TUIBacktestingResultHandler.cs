@@ -14,9 +14,12 @@
 */
 
 using System;
+using System.Globalization;
+using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
 using Newtonsoft.Json;
-using QuantConnect.Logging;
+using QuantConnect.Interfaces;
 using QuantConnect.Packets;
 
 namespace QuantConnect.Lean.Engine.Results
@@ -24,19 +27,51 @@ namespace QuantConnect.Lean.Engine.Results
     /// <summary>
     /// Result handler that displays BacktestResult packets in a Terminal User Interface (TUI)
     /// </summary>
-    public class TUIBacktestingResultHandler : BacktestingResultHandler
+    public class TUIBacktestingResultHandler : BacktestingResultHandler, IDisposable
     {
-        [DllImport("lean_tui.dll", CallingConvention = CallingConvention.Cdecl)]
-        private static extern void update(IntPtr handle, string backtestResult);
+        /// <summary>
+        /// Handle to the TUI application
+        /// </summary>
+        public IntPtr TUIHandle { get; set; }
 
-        private readonly TUILogHandler LeanTUI;
+        [DllImport("lean_tui.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr initialize(string dateFormat);
+
+        [DllImport("lean_tui.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern void trace(IntPtr handle, string msg);
+
+        [DllImport("lean_tui.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern void error(IntPtr handle, string msg);
+
+        [DllImport("lean_tui.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern void update(IntPtr handle, string backtestResult);
+
+        [DllImport("lean_tui.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern void free(IntPtr handle);
+
+        private const string DefaultDateFormat = "yyyyMMdd HH:mm:ss.fff";
+        private readonly string _dateFormat;
 
         /// <summary>
         /// Creates a new instance
         /// </summary>
         public TUIBacktestingResultHandler() : base()
         {
-            LeanTUI = TUILogHandler.Instance;
+            _dateFormat = DefaultDateFormat;
+
+            Console.SetOut(new TUITextWriter(TUIHandle, _dateFormat));
+            Console.SetError(new TUITextWriter(TUIHandle, _dateFormat));
+
+            TUIHandle = initialize(_dateFormat);
+        }
+
+        /// <summary>
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// </summary>
+        /// <filterpriority>2</filterpriority>
+        public void Dispose()
+        {
+            free(TUIHandle);
         }
 
         /// <summary>
@@ -45,11 +80,12 @@ namespace QuantConnect.Lean.Engine.Results
         /// <param name="packet"></param>
         protected override void SendPacket(Packet packet)
         {
-            base.SendPacket(packet);
             if (packet.Type == PacketType.BacktestResult)
             {
                 Update(packet);
             }
+
+            base.SendPacket(packet);
         }
 
         /// <summary>
@@ -59,7 +95,26 @@ namespace QuantConnect.Lean.Engine.Results
         private void Update(Packet packet)
         {
             var packetString = JsonConvert.SerializeObject(packet);
-            update(LeanTUI.TUIHandle, packetString);
+            update(TUIHandle, packetString);
+        }
+
+        private class TUITextWriter : TextWriter
+        {
+            private readonly IntPtr _tuiHandle;
+            private readonly string _dateFormat;
+
+            public TUITextWriter(IntPtr handle, string dateFormat)
+            {
+                _tuiHandle = handle;
+                _dateFormat = dateFormat;
+            }
+
+            public override void Write(string text)
+            {
+                trace(_tuiHandle, DateTime.Now.ToString(_dateFormat, CultureInfo.InvariantCulture) + " Trace:: " + text);
+            }
+
+            public override Encoding Encoding { get; } = Encoding.UTF8;
         }
     }
 }
