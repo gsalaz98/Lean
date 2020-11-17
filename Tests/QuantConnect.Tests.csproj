@@ -47,13 +47,7 @@
     <Message Text="ForceLinuxBuild $(ForceLinuxBuild)" Importance="high" />
   </Target>
   <Choose>
-    <When Condition="$(IsWindows) AND '$(ForceLinuxBuild)' != 'true'">
-      <ItemGroup>
-        <Reference Include="Python.Runtime, Version=1.0.5.30, Culture=neutral, processorArchitecture=MSIL">
-          <HintPath>..\packages\quantconnect.pythonnet\1.0.5.30\lib\win\Python.Runtime.dll</HintPath>
-        </Reference>
-      </ItemGroup>
-    </When>
+    <When Condition="$(IsWindows) AND '$(ForceLinuxBuild)' != 'true'" />
     <When Condition="$(IsLinux) OR '$(ForceLinuxBuild)' == 'true'">
       <ItemGroup>
         <Reference Include="Python.Runtime, Version=1.0.5.30, Culture=neutral, processorArchitecture=MSIL">
@@ -227,10 +221,10 @@
     <None Update="TestData\spy_with_keltner.csv">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Adapters\" />
-    <Folder Include="Tasks\" />
+    <Compile Remove="Tasks\**" />
+    <None Remove="Tasks\**" />
+    <Compile Remove="Adapters\**" />
+    <None Remove="Adapters\**" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Algorithm.CSharp\QuantConnect.Algorithm.CSharp.csproj" />
@@ -423,8 +417,10 @@
     <PackageReference Include="Microsoft.CodeAnalysis.VersionCheckAnalyzer" Version="2.9.3" />
     <PackageReference Include="Microsoft.CodeQuality.Analyzers" Version="2.9.3" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.8.0" />
     <PackageReference Include="Microsoft.NetCore.Analyzers" Version="2.9.3" />
     <PackageReference Include="Microsoft.NetFramework.Analyzers" Version="2.9.3" />
+    <PackageReference Include="Microsoft.TestPlatform.ObjectModel" Version="16.8.0" />
     <PackageReference Include="Moq" Version="4.7.63" />
     <PackageReference Include="NetMQ" Version="4.0.0.1" />
     <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
@@ -469,5 +465,9 @@
     <Compile Remove="RegressionAlgorithms\Test_MixedAssets.cs" />
     <Compile Remove="RegressionAlgorithms\Test_OnEndOfDay.cs" />
     <Compile Remove="RegressionAlgorithms\Test_SetHolding.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Remove="Tasks\**" />
+    <EmbeddedResource Remove="Adapters\**" />
   </ItemGroup>
 </Project>
