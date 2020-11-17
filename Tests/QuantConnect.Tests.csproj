@@ -433,6 +433,7 @@
     <PackageReference Include="NUnit3TestAdapter" Version="3.16.1" />
     <PackageReference Include="protobuf-net" Version="3.0.29" />
     <PackageReference Include="protobuf-net.Core" Version="3.0.29" />
+    <PackageReference Include="Python.Runtime" Version="1.0.0" />
     <PackageReference Include="QuantConnect.pythonnet" Version="1.0.5.30" />
     <PackageReference Include="RestSharp" Version="106.6.10" />
     <PackageReference Include="SuperSocket.ClientEngine.Core" Version="0.10.0" />
