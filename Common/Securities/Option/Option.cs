@@ -24,6 +24,7 @@ using QuantConnect.Data.Market;
 using QuantConnect.Interfaces;
 using System.Collections.Generic;
 using QuantConnect.Orders;
+using QuantConnect.Securities.Interfaces;
 
 namespace QuantConnect.Securities.Option
 {
@@ -70,9 +71,7 @@ namespace QuantConnect.Securities.Option
                 new ConstantSlippageModel(0),
                 new ImmediateSettlementModel(),
                 Securities.VolatilityModel.Null,
-                config.Symbol.Underlying.SecurityType == SecurityType.Future
-                    ? (IBuyingPowerModel)new FuturesOptionsMarginModel()
-                    : (IBuyingPowerModel)new OptionMarginModel(),
+                new OptionMarginModel(),
                 new OptionDataFilter(),
                 new SecurityPriceVariationModel(),
                 currencyConverter,
@@ -116,9 +115,7 @@ namespace QuantConnect.Securities.Option
                new ConstantSlippageModel(0),
                new ImmediateSettlementModel(),
                Securities.VolatilityModel.Null,
-               symbol.Underlying.SecurityType == SecurityType.Future
-                   ? (IBuyingPowerModel)new FuturesOptionsMarginModel()
-                   : (IBuyingPowerModel)new OptionMarginModel(),
+               new OptionMarginModel(),
                new OptionDataFilter(),
                new SecurityPriceVariationModel(),
                currencyConverter,
@@ -132,6 +129,94 @@ namespace QuantConnect.Securities.Option
             Holdings = new OptionHolding(this, currencyConverter);
             _symbolProperties = symbolProperties;
             SetFilter(-1, 1, TimeSpan.Zero, TimeSpan.FromDays(35));
+        }
+
+        /// <summary>
+        /// Creates instance of the Option class.
+        /// </summary>
+        /// <remarks>
+        /// Allows for the forwarding of the security configuration to the
+        /// base Security constructor
+        /// </remarks>
+        protected Option(SubscriptionDataConfig config,
+            Cash quoteCurrency,
+            SymbolProperties symbolProperties,
+            SecurityExchange exchange,
+            SecurityCache cache,
+            ISecurityPortfolioModel portfolioModel,
+            IFillModel fillModel,
+            IFeeModel feeModel,
+            ISlippageModel slippageModel,
+            ISettlementModel settlementModel,
+            IVolatilityModel volatilityModel,
+            IBuyingPowerModel buyingPowerModel,
+            ISecurityDataFilter dataFilter,
+            IPriceVariationModel priceVariationModel,
+            ICurrencyConverter currencyConverter,
+            IRegisteredSecurityDataTypesProvider registeredTypesProvider
+        ) : base(
+            config,
+            quoteCurrency,
+            symbolProperties,
+            exchange,
+            cache,
+            portfolioModel,
+            fillModel,
+            feeModel,
+            slippageModel,
+            settlementModel,
+            volatilityModel,
+            buyingPowerModel,
+            dataFilter,
+            priceVariationModel,
+            currencyConverter,
+            registeredTypesProvider
+        )
+        {
+        }
+
+        /// <summary>
+        /// Creates instance of the Option class.
+        /// </summary>
+        /// <remarks>
+        /// Allows for the forwarding of the security configuration to the
+        /// base Security constructor
+        /// </remarks>
+        protected Option(Symbol symbol,
+            Cash quoteCurrency,
+            SymbolProperties symbolProperties,
+            SecurityExchange exchange,
+            SecurityCache cache,
+            ISecurityPortfolioModel portfolioModel,
+            IFillModel fillModel,
+            IFeeModel feeModel,
+            ISlippageModel slippageModel,
+            ISettlementModel settlementModel,
+            IVolatilityModel volatilityModel,
+            IBuyingPowerModel buyingPowerModel,
+            ISecurityDataFilter dataFilter,
+            IPriceVariationModel priceVariationModel,
+            ICurrencyConverter currencyConverter,
+            IRegisteredSecurityDataTypesProvider registeredTypesProvider
+        ) : base(
+            symbol,
+            quoteCurrency,
+            symbolProperties,
+            exchange,
+            cache,
+            portfolioModel,
+            fillModel,
+            feeModel,
+            slippageModel,
+            settlementModel,
+            volatilityModel,
+            buyingPowerModel,
+            dataFilter,
+            priceVariationModel,
+            currencyConverter,
+            registeredTypesProvider
+        )
+        {
         }
 
         // save off a strongly typed version of symbol properties

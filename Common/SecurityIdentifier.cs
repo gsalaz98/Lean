@@ -560,7 +560,7 @@ namespace QuantConnect
             market = market.ToLowerInvariant();
             symbol = forceSymbolToUpper ? symbol.LazyToUpper() : symbol;
 
-            if (securityType == SecurityType.Option && underlying?.SecurityType == SecurityType.Future)
+            if (securityType == SecurityType.FutureOption)
             {
                 // Futures options tickers might not match, so we need
                 // to map the provided future Symbol to the actual future option Symbol.

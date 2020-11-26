@@ -157,7 +157,7 @@ namespace QuantConnect
         /// <param name="alias">An alias to be used for the symbol cache. Required when
         /// adding the same security from diferent markets</param>
         /// <returns>A new Symbol object for the specified option contract</returns>
-        public static Symbol CreateOption(Symbol underlyingSymbol, string market, OptionStyle style, OptionRight right, decimal strike, DateTime expiry, string alias = null, SecurityType optionType = QuantConnect.SecurityType.Option)
+        public static Symbol CreateOption(Symbol underlyingSymbol, string market, OptionStyle style, OptionRight right, decimal strike, DateTime expiry, string alias = null, SecurityType optionType = SecurityType.Option)
         {
             var sid = SecurityIdentifier.GenerateOption(expiry, underlyingSymbol.ID, market, strike, right, style);
 

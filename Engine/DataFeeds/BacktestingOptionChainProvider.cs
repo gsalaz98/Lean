@@ -43,7 +43,7 @@ namespace QuantConnect.Lean.Engine.DataFeeds
             // build the option contract list from the open interest zip file entry names
 
             // create a canonical option symbol for the given underlying
-            var canonicalSymbol = Symbol.CreateOption(underlyingSymbol, underlyingSymbol.ID.Market, default(OptionStyle), default(OptionRight), 0, SecurityIdentifier.DefaultDate);
+            var canonicalSymbol = Symbol.CreateOption(underlyingSymbol, underlyingSymbol.ID.Market, default(OptionStyle), default(OptionRight), 0, SecurityIdentifier.DefaultDate, optionType: underlyingSymbol.SecurityType);
 
             var fileExists = false;
             var zipFileName = string.Empty;
