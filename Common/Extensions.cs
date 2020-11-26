@@ -2196,11 +2196,9 @@ namespace QuantConnect
                 case SecurityType.Future:
                     return symbol.ID.Date;
                 case SecurityType.Option:
-                    if (symbol.Underlying.SecurityType == SecurityType.Future)
-                    {
-                        return FutureOptionSymbol.GetLastDayOfTrading(symbol);
-                    }
                     return OptionSymbol.GetLastDayOfTrading(symbol);
+                case SecurityType.FutureOption:
+                    return FutureOptionSymbol.GetLastDayOfTrading(symbol);
                 default:
                     return mapFile?.DelistingDate ?? SecurityIdentifier.DefaultDate;
             }
@@ -2382,7 +2380,7 @@ namespace QuantConnect
         /// <returns><see cref="OptionChainUniverse"/> for the given symbol</returns>
         public static OptionChainUniverse CreateOptionChain(this IAlgorithm algorithm, Symbol symbol, Func<OptionFilterUniverse, OptionFilterUniverse> filter, UniverseSettings universeSettings = null)
         {
-            if (symbol.SecurityType != SecurityType.Option)
+            if (symbol.SecurityType != SecurityType.Option && symbol.SecurityType != SecurityType.FutureOption)
             {
                 throw new ArgumentException("CreateOptionChain requires an option symbol.");
             }
@@ -2405,7 +2403,8 @@ namespace QuantConnect
                     default(OptionRight),
                     0m,
                     SecurityIdentifier.DefaultDate,
-                    alias
+                    alias,
+                    optionType: symbol.SecurityType
                 );
             }
 

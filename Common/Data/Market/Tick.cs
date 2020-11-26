@@ -722,8 +722,7 @@ namespace QuantConnect.Data.Market
         /// <returns>Scaling factor</returns>
         private static decimal GetScaleFactor(Symbol symbol)
         {
-            return symbol.SecurityType == SecurityType.Equity ||
-                    (symbol.SecurityType == SecurityType.Option && symbol.Underlying.SecurityType == SecurityType.Equity) ? 10000m : 1;
+            return symbol.SecurityType == SecurityType.Equity || symbol.SecurityType == SecurityType.Option ? 10000m : 1;
         }
 
     }

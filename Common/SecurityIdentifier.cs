@@ -384,9 +384,10 @@ namespace QuantConnect
             string market,
             decimal strike,
             OptionRight optionRight,
-            OptionStyle optionStyle)
+            OptionStyle optionStyle,
+            SecurityType optionType = SecurityType.Option)
         {
-            return Generate(expiry, underlying.Symbol, SecurityType.Option, market, strike, optionRight, optionStyle, underlying);
+            return Generate(expiry, underlying.Symbol, optionType, market, strike, optionRight, optionStyle, underlying);
         }
 
         /// <summary>

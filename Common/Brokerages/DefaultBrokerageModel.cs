@@ -319,9 +319,10 @@ namespace QuantConnect.Brokerages
                     model = new SecurityMarginModel(leverage, RequiredFreeBuyingPowerPercent);
                     break;
                 case SecurityType.Option:
-                    model = security.Symbol.Underlying.SecurityType == SecurityType.Future
-                        ? (IBuyingPowerModel)new FuturesOptionsMarginModel(RequiredFreeBuyingPowerPercent, (Option)security)
-                        : (IBuyingPowerModel)new OptionMarginModel(RequiredFreeBuyingPowerPercent);
+                    model = new OptionMarginModel(RequiredFreeBuyingPowerPercent);
+                    break;
+                case SecurityType.FutureOption:
+                    model = new FuturesOptionsMarginModel(RequiredFreeBuyingPowerPercent, (Option)security);
                     break;
                 case SecurityType.Future:
                     model = new FutureMarginModel(RequiredFreeBuyingPowerPercent, security);

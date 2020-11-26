@@ -81,17 +81,15 @@ namespace QuantConnect.Brokerages.InteractiveBrokers
             switch (symbol.ID.SecurityType)
             {
                 case SecurityType.Option:
-                    if (symbol.Underlying.SecurityType != SecurityType.Equity)
-                    {
-                        // We use the underlying Future Symbol since IB doesn't use
-                        // the Futures Options' ticker, but rather uses the underlying's
-                        // Symbol, mapped to the brokerage.
-                        return GetBrokerageSymbol(symbol.Underlying);
-                    }
-
                     // Final case is for equities. We use the mapped value to select
                     // the equity we want to trade.
                     return symbol.Underlying.Value;
+
+                case SecurityType.FutureOption:
+                    // We use the underlying Future Symbol since IB doesn't use
+                    // the Futures Options' ticker, but rather uses the underlying's
+                    // Symbol, mapped to the brokerage.
+                    return GetBrokerageSymbol(symbol.Underlying);
 
                 case SecurityType.Future:
                     return GetBrokerageRootSymbol(symbol.ID.Symbol);
