@@ -370,6 +370,102 @@ namespace QuantConnect.Research
         }
 
         /// <summary>
+        /// Loads the requested Futures Options data into a pandas DataFrame
+        /// </summary>
+        /// <param name="symbol">The symbol to retrieve historical futures options data for</param>
+        /// <param name="start">The history request start time</param>
+        /// <param name="end">The history request end time. Defaults to 1 day if null</param>
+        /// <param name="resolution">The resolution to request</param>
+        /// <returns>A <see cref="OptionHistory"/> object that contains historical option data.</returns>
+        public OptionHistory GetFutureOptionHistory(Symbol symbol, DateTime start, DateTime? end = null, Resolution? resolution = null)
+        {
+            if (!end.HasValue || end.Value == start)
+            {
+                end = start.AddDays(1);
+            }
+
+            // Load a canonical option Symbol if the user provides us with an underlying Symbol
+            if (symbol.SecurityType != SecurityType.FutureOption && symbol.SecurityType != SecurityType.Future)
+            {
+                throw new ArgumentException("The provided Symbol is not a Future or a Future Option. Try adding a future first with `AddFuture(...)`, then call `AddFutureOption(...)` with your future and a filter. " +
+                    "Provide the future Symbol obtained from `AddFuture(...)` to this function.");
+            }
+
+            if (symbol.SecurityType == SecurityType.FutureOption && symbol.IsCanonical())
+            {
+                // Somehow we got a canonical FOP from the user. Let's check out the universe, and return
+                // a subset of all the data if no universe exists.
+                // TODO
+            }
+            else if (symbol.SecurityType == SecurityType.FutureOption)
+            {
+                // Non-canonical Symbol was provided, so we load the contract directly.
+                return new OptionHistory(History(new[] { symbol }, start, end.Value, resolution ?? Resolution.Minute));
+            }
+            else if (symbol.SecurityType == SecurityType.Future && symbol.IsCanonical())
+            {
+                // Check the universe manager for an existing FOPs universe. If no universe exists, then let's
+                // throw and ask that the `AddFutureOption(...)` method is called before requesting history.
+                Universe futuresOptionsUniverse;
+                if (!UniverseManager.TryGetValue(symbol, out futuresOptionsUniverse))
+                {
+                    throw new ArgumentException($"The provided Future {symbol} does not have any Futures Options added for it. " +
+                        $"Try calling the `AddFutureOption(symbol, filter)` function before requesting Futures Options history.");
+                }
+
+                var universeSymbols = new HashSet<Symbol>();
+                foreach (var date in QuantConnect.Time.EachDay(start, end.Value))
+                {
+                    var optionChainUniverseData = new OptionChainUniverseDataCollection(date, symbol);
+                    universeSymbols.UnionWith(futuresOptionsUniverse.PerformSelection(date, optionChainUniverseData));
+                }
+
+                return new OptionHistory(History(universeSymbols, start, end.Value, resolution ?? Resolution.Minute));
+            }
+
+            IEnumerable<Symbol> symbols;
+            if (symbol.IsCanonical())
+            {
+                // canonical symbol, lets find the contracts
+                var option = Securities[symbol] as Option;
+                var resolutionToUseForUnderlying = resolution ?? SubscriptionManager.SubscriptionDataConfigService
+                                                       .GetSubscriptionDataConfigs(symbol)
+                                                       .GetHighestResolution();
+                if (!Securities.ContainsKey(symbol.Underlying))
+                {
+                    // only add underlying if not present
+                    AddEquity(symbol.Underlying.Value, resolutionToUseForUnderlying);
+                }
+                var allSymbols = new List<Symbol>();
+                for (var date = start; date < end; date = date.AddDays(1))
+                {
+                    if (option.Exchange.DateIsOpen(date))
+                    {
+                        allSymbols.AddRange(OptionChainProvider.GetOptionContractList(symbol.Underlying, date));
+                    }
+                }
+
+                var optionFilterUniverse = new OptionFilterUniverse();
+                var distinctSymbols = allSymbols.Distinct();
+                symbols = base.History(symbol.Underlying, start, end.Value, resolution)
+                    .SelectMany(x =>
+                    {
+                        // the option chain symbols wont change so we can set 'exchangeDateChange' to false always
+                        optionFilterUniverse.Refresh(distinctSymbols, x, exchangeDateChange:false);
+                        return option.ContractFilter.Filter(optionFilterUniverse);
+                    })
+                    .Distinct().Concat(new[] { symbol.Underlying });
+            }
+            else
+            {
+                // the symbol is a contract
+                symbols = new List<Symbol>{ symbol };
+            }
+
+            return new OptionHistory(History(symbols, start, end.Value, resolution));
+        }
+
+        /// <summary>
         /// Gets <see cref="FutureHistory"/> object for a given symbol, date and resolution
         /// </summary>
         /// <param name="symbol">The symbol to retrieve historical future data for</param>
