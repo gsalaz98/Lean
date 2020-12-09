@@ -192,6 +192,12 @@ namespace QuantConnect.Research
             }
         }
 
+        private void Reset()
+        {
+            ResetStartDate();
+            InitializeDataFeed();
+        }
+
         private void InitializeDataFeed()
         {
             var universeSelection = new UniverseSelection(this, _securityService, _algorithmHandlers.DataPermissionsManager, _algorithmHandlers.DataProvider);
@@ -481,7 +487,7 @@ namespace QuantConnect.Research
 
             // Pump the universe selection models before requesting a universe from the UniverseManager
             SetStartDate(start);
-            SetEndDate(Time);
+            SetEndDate(end.Value);
 
             FrameworkPostInitialize();
             OnEndOfTimeStep();
@@ -509,8 +515,7 @@ namespace QuantConnect.Research
                 .SelectMany(kvp => kvp.Value.Members.Keys)
                 .ToHashSet();
 
-            ResetStartDate();
-            InitializeDataFeed();
+            Reset();
 
             return new OptionHistory(History(universeSymbols, start, end.Value, resolution));
         }
