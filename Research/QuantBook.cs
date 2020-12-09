@@ -32,6 +32,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using QuantConnect.Data.UniverseSelection;
 using QuantConnect.Logging;
 using QuantConnect.Packets;
@@ -49,6 +50,11 @@ namespace QuantConnect.Research
         private IDataCacheProvider _dataCacheProvider;
         private IDataProvider _dataProvider;
         private static bool _isPythonNotebook;
+        private DataManager _dataManager;
+        private Synchronizer _synchronizer;
+        private FileSystemDataFeed _fileSystemDataFeed;
+        private LeanEngineAlgorithmHandlers _algorithmHandlers;
+        private SecurityService _securityService;
 
         static QuantBook()
         {
@@ -95,38 +101,24 @@ namespace QuantConnect.Research
                     _pandas = Py.Import("pandas");
                 }
 
-                // Issue #4892 : Set start time relative to NY time
-                // when the data is available from the previous day
-                var newYorkTime = DateTime.UtcNow.ConvertFromUtc(TimeZones.NewYork);
-                var hourThreshold = Config.GetInt("qb-data-hour", 9);
-
-                // If it is after our hour threshold; then we can use today
-                if (newYorkTime.Hour >= hourThreshold)
-                {
-                    SetStartDate(newYorkTime);
-                }
-                else
-                {
-                    SetStartDate(newYorkTime - TimeSpan.FromDays(1));
-                }
-
+                ResetStartDate();
 
                 // Sets PandasConverter
                 SetPandasConverter();
 
                 // Initialize History Provider
                 var composer = new Composer();
-                var algorithmHandlers = LeanEngineAlgorithmHandlers.FromConfiguration(composer);
+                _algorithmHandlers = LeanEngineAlgorithmHandlers.FromConfiguration(composer);
                 var systemHandlers = LeanEngineSystemHandlers.FromConfiguration(composer);
                 // init the API
                 systemHandlers.Initialize();
                 systemHandlers.LeanManager.Initialize(systemHandlers,
-                    algorithmHandlers,
+                    _algorithmHandlers,
                     new BacktestNodePacket(),
                     new AlgorithmManager(false));
                 systemHandlers.LeanManager.SetAlgorithm(this);
 
-                algorithmHandlers.ObjectStore.Initialize("QuantBook",
+                _algorithmHandlers.ObjectStore.Initialize("QuantBook",
                     Config.GetInt("job-user-id"),
                     Config.GetInt("project-id"),
                     Config.Get("api-access-token"),
@@ -138,53 +130,102 @@ namespace QuantConnect.Research
                         StorageFileCount = Config.GetInt("storage-file-count", 100),
                         StoragePermissions = (FileAccess) Config.GetInt("storage-permissions", (int)FileAccess.ReadWrite)
                     });
-                SetObjectStore(algorithmHandlers.ObjectStore);
+                SetObjectStore(_algorithmHandlers.ObjectStore);
 
-                _dataCacheProvider = new ZipDataCacheProvider(algorithmHandlers.DataProvider);
-                _dataProvider = algorithmHandlers.DataProvider;
+                _dataCacheProvider = new ZipDataCacheProvider(_algorithmHandlers.DataProvider);
+                _dataProvider = _algorithmHandlers.DataProvider;
 
                 var symbolPropertiesDataBase = SymbolPropertiesDatabase.FromDataFolder();
                 var registeredTypes = new RegisteredSecurityDataTypesProvider();
-                var securityService = new SecurityService(Portfolio.CashBook,
+                _securityService = new SecurityService(Portfolio.CashBook,
                     MarketHoursDatabase,
                     symbolPropertiesDataBase,
                     this,
                     registeredTypes,
                     new SecurityCacheProvider(Portfolio));
-                Securities.SetSecurityService(securityService);
-                SubscriptionManager.SetDataManager(
-                    new DataManager(new NullDataFeed(),
-                        new UniverseSelection(this, securityService, algorithmHandlers.DataPermissionsManager, algorithmHandlers.DataProvider),
-                        this,
-                        TimeKeeper,
-                        MarketHoursDatabase,
-                        false,
-                        registeredTypes,
-                        algorithmHandlers.DataPermissionsManager));
+                Securities.SetSecurityService(_securityService);
 
-                var mapFileProvider = algorithmHandlers.MapFileProvider;
+                InitializeDataFeed();
+
+                var mapFileProvider = _algorithmHandlers.MapFileProvider;
                 HistoryProvider = composer.GetExportedValueByTypeName<IHistoryProvider>(Config.Get("history-provider", "SubscriptionDataReaderHistoryProvider"));
                 HistoryProvider.Initialize(
                     new HistoryProviderInitializeParameters(
                         null,
                         null,
-                        algorithmHandlers.DataProvider,
+                        _algorithmHandlers.DataProvider,
                         _dataCacheProvider,
                         mapFileProvider,
-                        algorithmHandlers.FactorFileProvider,
+                        _algorithmHandlers.FactorFileProvider,
                         null,
                         true,
-                        algorithmHandlers.DataPermissionsManager
+                        _algorithmHandlers.DataPermissionsManager
                     )
                 );
 
                 SetOptionChainProvider(new CachingOptionChainProvider(new BacktestingOptionChainProvider()));
                 SetFutureChainProvider(new CachingFutureChainProvider(new BacktestingFutureChainProvider()));
+
+                Transactions.SetOrderProcessor(_algorithmHandlers.Transactions);
             }
             catch (Exception exception)
             {
                 throw new Exception("QuantBook.Main(): " + exception);
             }
+        }
+
+        private void ResetStartDate()
+        {
+            // Issue #4892 : Set start time relative to NY time
+            // when the data is available from the previous day
+            var newYorkTime = DateTime.UtcNow.ConvertFromUtc(TimeZones.NewYork);
+            var hourThreshold = Config.GetInt("qb-data-hour", 9);
+
+            // If it is after our hour threshold; then we can use today
+            if (newYorkTime.Hour >= hourThreshold)
+            {
+                SetStartDate(newYorkTime);
+            }
+            else
+            {
+                SetStartDate(newYorkTime - TimeSpan.FromDays(1));
+            }
+        }
+
+        private void InitializeDataFeed()
+        {
+            var universeSelection = new UniverseSelection(this, _securityService, _algorithmHandlers.DataPermissionsManager, _algorithmHandlers.DataProvider);
+            if (_fileSystemDataFeed == null)
+            {
+                _fileSystemDataFeed = new FileSystemDataFeed();
+            }
+
+            _dataManager = new DataManager(
+                _fileSystemDataFeed,
+                universeSelection,
+                this,
+                TimeKeeper,
+                MarketHoursDatabase,
+                LiveMode,
+                RegisteredSecurityDataTypesProvider.Null,
+                _algorithmHandlers.DataPermissionsManager);
+
+            _synchronizer = new Synchronizer();
+            _synchronizer.Initialize(this, _dataManager);
+
+            _fileSystemDataFeed.Initialize(
+                this,
+                null,
+                _algorithmHandlers.Results,
+                _algorithmHandlers.MapFileProvider,
+                _algorithmHandlers.FactorFileProvider,
+                _algorithmHandlers.DataProvider,
+                _dataManager,
+                _synchronizer,
+                new DataChannelProvider());
+
+            SubscriptionManager.SetDataManager(_dataManager);
+            _synchronizer.Initialize(this, _dataManager);
         }
 
         /// <summary>
@@ -316,13 +357,18 @@ namespace QuantConnect.Research
         /// <returns>A <see cref="OptionHistory"/> object that contains historical option data.</returns>
         public OptionHistory GetOptionHistory(Symbol symbol, DateTime start, DateTime? end = null, Resolution? resolution = null)
         {
+            if (symbol.SecurityType == SecurityType.FutureOption || symbol.SecurityType == SecurityType.Future)
+            {
+                return GetFutureOptionHistory(symbol, start, end, resolution);
+            }
+
             if (!end.HasValue || end.Value == start)
             {
                 end = start.AddDays(1);
             }
 
             // Load a canonical option Symbol if the user provides us with an underlying Symbol
-            if (symbol.SecurityType != SecurityType.Option && symbol.SecurityType != SecurityType.FutureOption)
+            if (symbol.SecurityType != SecurityType.Option)
             {
                 symbol = AddOption(symbol, resolution, symbol.ID.Market).Symbol;
             }
@@ -391,78 +437,82 @@ namespace QuantConnect.Research
                     "Provide the future Symbol obtained from `AddFuture(...)` to this function.");
             }
 
-            if (symbol.SecurityType == SecurityType.FutureOption && symbol.IsCanonical())
-            {
-                // Somehow we got a canonical FOP from the user. Let's check out the universe, and return
-                // a subset of all the data if no universe exists.
-                // TODO
-            }
-            else if (symbol.SecurityType == SecurityType.FutureOption)
+            if (symbol.SecurityType == SecurityType.FutureOption && !symbol.IsCanonical())
             {
                 // Non-canonical Symbol was provided, so we load the contract directly.
-                return new OptionHistory(History(new[] { symbol }, start, end.Value, resolution ?? Resolution.Minute));
-            }
-            else if (symbol.SecurityType == SecurityType.Future && symbol.IsCanonical())
-            {
-                // Check the universe manager for an existing FOPs universe. If no universe exists, then let's
-                // throw and ask that the `AddFutureOption(...)` method is called before requesting history.
-                Universe futuresOptionsUniverse;
-                if (!UniverseManager.TryGetValue(symbol, out futuresOptionsUniverse))
-                {
-                    throw new ArgumentException($"The provided Future {symbol} does not have any Futures Options added for it. " +
-                        $"Try calling the `AddFutureOption(symbol, filter)` function before requesting Futures Options history.");
-                }
-
-                var universeSymbols = new HashSet<Symbol>();
-                foreach (var date in QuantConnect.Time.EachDay(start, end.Value))
-                {
-                    var optionChainUniverseData = new OptionChainUniverseDataCollection(date, symbol);
-                    universeSymbols.UnionWith(futuresOptionsUniverse.PerformSelection(date, optionChainUniverseData));
-                }
-
-                return new OptionHistory(History(universeSymbols, start, end.Value, resolution ?? Resolution.Minute));
+                return new OptionHistory(History(new[] { symbol, symbol.Underlying }, start, end.Value, resolution ?? Resolution.Minute));
             }
 
-            IEnumerable<Symbol> symbols;
-            if (symbol.IsCanonical())
+            Symbol canonicalFutureOption;
+            if (symbol.SecurityType == SecurityType.Future && symbol.IsCanonical())
             {
-                // canonical symbol, lets find the contracts
-                var option = Securities[symbol] as Option;
-                var resolutionToUseForUnderlying = resolution ?? SubscriptionManager.SubscriptionDataConfigService
-                                                       .GetSubscriptionDataConfigs(symbol)
-                                                       .GetHighestResolution();
-                if (!Securities.ContainsKey(symbol.Underlying))
-                {
-                    // only add underlying if not present
-                    AddEquity(symbol.Underlying.Value, resolutionToUseForUnderlying);
-                }
-                var allSymbols = new List<Symbol>();
-                for (var date = start; date < end; date = date.AddDays(1))
-                {
-                    if (option.Exchange.DateIsOpen(date))
-                    {
-                        allSymbols.AddRange(OptionChainProvider.GetOptionContractList(symbol.Underlying, date));
-                    }
-                }
-
-                var optionFilterUniverse = new OptionFilterUniverse();
-                var distinctSymbols = allSymbols.Distinct();
-                symbols = base.History(symbol.Underlying, start, end.Value, resolution)
-                    .SelectMany(x =>
-                    {
-                        // the option chain symbols wont change so we can set 'exchangeDateChange' to false always
-                        optionFilterUniverse.Refresh(distinctSymbols, x, exchangeDateChange:false);
-                        return option.ContractFilter.Filter(optionFilterUniverse);
-                    })
-                    .Distinct().Concat(new[] { symbol.Underlying });
+                canonicalFutureOption = QuantConnect.Symbol.CreateOption(
+                    symbol,
+                    symbol.ID.Market,
+                    default(OptionStyle),
+                    default(OptionRight),
+                    default(decimal),
+                    SecurityIdentifier.DefaultDate);
+            }
+            else if (symbol.SecurityType == SecurityType.Future)
+            {
+                canonicalFutureOption = QuantConnect.Symbol.CreateOption(
+                    QuantConnect.Symbol.Create(symbol.ID.Symbol, SecurityType.Future, symbol.ID.Market),
+                    symbol.ID.Market,
+                    default(OptionStyle),
+                    default(OptionRight),
+                    default(decimal),
+                    SecurityIdentifier.DefaultDate);
+            }
+            else if (symbol.SecurityType == SecurityType.FutureOption && symbol.Underlying.IsCanonical())
+            {
+                canonicalFutureOption = symbol;
             }
             else
             {
-                // the symbol is a contract
-                symbols = new List<Symbol>{ symbol };
+                canonicalFutureOption = QuantConnect.Symbol.CreateOption(
+                    symbol.Underlying,
+                    symbol.ID.Market,
+                    default(OptionStyle),
+                    default(OptionRight),
+                    default(decimal),
+                    SecurityIdentifier.DefaultDate);
             }
 
-            return new OptionHistory(History(symbols, start, end.Value, resolution));
+            // Pump the universe selection models before requesting a universe from the UniverseManager
+            SetStartDate(start);
+            SetEndDate(Time);
+
+            FrameworkPostInitialize();
+            OnEndOfTimeStep();
+
+            // Check the universe manager for an existing FOPs universe. If no universe exists, then let's
+            // throw and ask that the `AddFutureOption(...)` method is called before requesting history.
+            Universe futuresUniverse;
+            if (!UniverseManager.TryGetValue(canonicalFutureOption.Underlying, out futuresUniverse))
+            {
+                throw new Exception();
+            }
+
+            foreach (var timeSlice in _synchronizer.StreamData(new CancellationToken(false)))
+            {
+                if (!timeSlice.IsTimePulse)
+                {
+                    OnFrameworkData(timeSlice.Slice);
+                }
+
+                OnEndOfTimeStep();
+            }
+
+            var universeSymbols = UniverseManager
+                .Where(kvp => kvp.Key.HasUnderlying && futuresUniverse.ContainsMember(kvp.Key.Underlying))
+                .SelectMany(kvp => kvp.Value.Members.Keys)
+                .ToHashSet();
+
+            ResetStartDate();
+            InitializeDataFeed();
+
+            return new OptionHistory(History(universeSymbols, start, end.Value, resolution));
         }
 
         /// <summary>
