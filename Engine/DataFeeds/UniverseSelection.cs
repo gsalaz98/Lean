@@ -26,6 +26,7 @@ using QuantConnect.Logging;
 using QuantConnect.Securities;
 using QuantConnect.Util;
 using QuantConnect.Data.Fundamental;
+using QuantConnect.Packets;
 
 namespace QuantConnect.Lean.Engine.DataFeeds
 {
@@ -42,6 +43,7 @@ namespace QuantConnect.Lean.Engine.DataFeeds
         private readonly PendingRemovalsManager _pendingRemovalsManager;
         private readonly CurrencySubscriptionDataConfigManager _currencySubscriptionDataConfigManager;
         private readonly InternalSubscriptionManager _internalSubscriptionManager;
+        private readonly MarketHoursDatabase _marketHoursDatabase;
         private bool _initializedSecurityBenchmark;
         private readonly IDataProvider _dataProvider;
         private bool _anyDoesNotHaveFundamentalDataWarningLogged;
@@ -73,6 +75,8 @@ namespace QuantConnect.Lean.Engine.DataFeeds
                 dataPermissionManager.GetResolution(Resolution.Minute));
             // TODO: next step is to merge currency internal subscriptions under the same 'internal manager' instance and we could move this directly into the DataManager class
             _internalSubscriptionManager = new InternalSubscriptionManager(_algorithm, internalConfigResolution);
+
+            _marketHoursDatabase = MarketHoursDatabase.FromDataFolder();
         }
 
         /// <summary>
@@ -111,6 +115,15 @@ namespace QuantConnect.Lean.Engine.DataFeeds
             }
 
             IEnumerable<Symbol> selectSymbolsResult;
+
+            var universeMarketHours = _marketHoursDatabase.GetEntry(universe.Market, (string)null, universe.SecurityType)
+                .ExchangeHours;
+
+
+            if (!universeMarketHours.IsDateOpen(dateTimeUtc.ConvertFromUtc(universeMarketHours.TimeZone)))
+            {
+                return SecurityChanges.None;
+            }
 
             // check if this universe must be filtered with fine fundamental data
             var fineFiltered = universe as FineFundamentalFilteredUniverse;
