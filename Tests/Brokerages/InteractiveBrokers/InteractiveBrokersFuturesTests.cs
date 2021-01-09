@@ -32,7 +32,7 @@ namespace QuantConnect.Tests.Brokerages.InteractiveBrokers
         [Test]
         public void CreatesExpectedFuturesContracts()
         {
-            var symbolMapper = new InteractiveBrokersSymbolMapper(new LocalDiskMapFileProvider());
+            var symbolMapper = new InteractiveBrokersSymbolMapper(new LocalDiskMapFileProvider(), null);
 
             using (var ib = new InteractiveBrokersBrokerage(new QCAlgorithm(), new OrderProvider(), new SecurityProvider(), new AggregationManager(), new LocalDiskMapFileProvider()))
             {

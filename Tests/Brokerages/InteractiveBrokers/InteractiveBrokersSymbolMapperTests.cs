@@ -18,7 +18,9 @@ using IBApi;
 using NUnit.Framework;
 using QuantConnect.Brokerages.InteractiveBrokers;
 using QuantConnect.Data.Auxiliary;
+using QuantConnect.Lean.Engine.DataFeeds;
 using QuantConnect.Securities;
+using QuantConnect.Securities.FutureOption;
 using IB = QuantConnect.Brokerages.InteractiveBrokers.Client;
 
 namespace QuantConnect.Tests.Brokerages.InteractiveBrokers
@@ -29,7 +31,7 @@ namespace QuantConnect.Tests.Brokerages.InteractiveBrokers
         [Test]
         public void ReturnsCorrectLeanSymbol()
         {
-            var mapper = new InteractiveBrokersSymbolMapper(new LocalDiskMapFileProvider());
+            var mapper = new InteractiveBrokersSymbolMapper(new LocalDiskMapFileProvider(), null);
 
             var symbol = mapper.GetLeanSymbol("EURUSD", SecurityType.Forex, Market.FXCM);
             Assert.AreEqual("EURUSD", symbol.Value);
@@ -50,7 +52,7 @@ namespace QuantConnect.Tests.Brokerages.InteractiveBrokers
         [Test]
         public void ReturnsCorrectBrokerageSymbol()
         {
-            var mapper = new InteractiveBrokersSymbolMapper(new LocalDiskMapFileProvider());
+            var mapper = new InteractiveBrokersSymbolMapper(new LocalDiskMapFileProvider(), null);
 
             var symbol = Symbol.Create("EURUSD", SecurityType.Forex, Market.FXCM);
             var brokerageSymbol = mapper.GetBrokerageSymbol(symbol);
@@ -70,7 +72,7 @@ namespace QuantConnect.Tests.Brokerages.InteractiveBrokers
         [TestCase("NWSA", "FOXA")]
         public void MapCorrectBrokerageSymbol(string ticker, string ibSymbol)
         {
-            var mapper = new InteractiveBrokersSymbolMapper(new LocalDiskMapFileProvider());
+            var mapper = new InteractiveBrokersSymbolMapper(new LocalDiskMapFileProvider(), null);
 
             var symbol = Symbol.Create(ticker, SecurityType.Equity, Market.USA);
             var brokerageSymbol = mapper.GetBrokerageSymbol(symbol);
@@ -80,7 +82,7 @@ namespace QuantConnect.Tests.Brokerages.InteractiveBrokers
         [Test]
         public void ThrowsOnNullOrEmptyOrInvalidSymbol()
         {
-            var mapper = new InteractiveBrokersSymbolMapper(new LocalDiskMapFileProvider());
+            var mapper = new InteractiveBrokersSymbolMapper(new LocalDiskMapFileProvider(), null);
 
             Assert.Throws<ArgumentException>(() => mapper.GetLeanSymbol(null, SecurityType.Forex, Market.FXCM));
 
@@ -160,7 +162,7 @@ namespace QuantConnect.Tests.Brokerages.InteractiveBrokers
                 Currency = "USD"
             };
 
-            var mapper = new InteractiveBrokersSymbolMapper(new LocalDiskMapFileProvider());
+            var mapper = new InteractiveBrokersSymbolMapper(new LocalDiskMapFileProvider(), null);
             var actualContract = mapper.ParseMalformedContractFutureSymbol(malformedContract, SymbolPropertiesDatabase.FromDataFolder());
 
             Assert.AreEqual(expectedContract.Symbol, actualContract.Symbol);
@@ -172,6 +174,19 @@ namespace QuantConnect.Tests.Brokerages.InteractiveBrokers
             Assert.AreEqual(expectedContract.SecType, actualContract.SecType);
             Assert.AreEqual(expectedContract.IncludeExpired, actualContract.IncludeExpired);
             Assert.AreEqual(expectedContract.Currency, actualContract.Currency);
+        }
+
+        [TestCase(2021, 2, 23)]
+        [TestCase(2021, 3, 25)]
+        public void FuturesOptionsWithUnderlyingContractMonthMappedByRuleResolvesUnderlyingGetLeanSymbol(int year, int month, int day)
+        {
+            var futuresChainProvider = new BacktestingFutureChainProvider();
+            var mapper = new InteractiveBrokersSymbolMapper(new LocalDiskMapFileProvider(), new FuturesOptionsUnderlyingMapper(futuresChainProvider));
+
+            var expectedUnderlyingSymbol = Symbol.CreateFuture("GC", Market.COMEX, new DateTime(2021, 4, 28));
+            var futureOption = mapper.GetLeanSymbol("OG", SecurityType.FutureOption, Market.COMEX, new DateTime(year, month, day));
+
+            Assert.AreEqual(expectedUnderlyingSymbol, futureOption.Underlying);
         }
     }
 }

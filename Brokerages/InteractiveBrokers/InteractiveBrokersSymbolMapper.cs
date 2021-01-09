@@ -36,6 +36,7 @@ namespace QuantConnect.Brokerages.InteractiveBrokers
     public class InteractiveBrokersSymbolMapper : ISymbolMapper
     {
         private readonly IMapFileProvider _mapFileProvider;
+        private readonly FuturesOptionsUnderlyingMapper _futuresOptionsUnderlyingMapper;
 
         // we have a special treatment of futures, because IB renamed several exchange tickers (like GBP instead of 6B). We fix this:
         // We map those tickers back to their original names using the map below
@@ -44,10 +45,11 @@ namespace QuantConnect.Brokerages.InteractiveBrokers
         /// <summary>
         /// Constructs InteractiveBrokersSymbolMapper. Default parameters are used.
         /// </summary>
-        public InteractiveBrokersSymbolMapper(IMapFileProvider mapFileProvider) :
+        public InteractiveBrokersSymbolMapper(IMapFileProvider mapFileProvider, FuturesOptionsUnderlyingMapper futuresOptionsUnderlyingMapper) :
             this(Path.Combine("InteractiveBrokers", "IB-symbol-map.json"))
         {
             _mapFileProvider = mapFileProvider;
+            _futuresOptionsUnderlyingMapper = futuresOptionsUnderlyingMapper;
         }
 
         /// <summary>
@@ -151,15 +153,21 @@ namespace QuantConnect.Brokerages.InteractiveBrokers
                         return Symbol.CreateOption(brokerageSymbol, market, OptionStyle.American, optionRight, strike, expirationDate);
 
                     case SecurityType.FutureOption:
-                        var canonicalFutureSymbol = Symbol.Create(GetLeanRootSymbol(brokerageSymbol), SecurityType.Future, market);
-                        var futureContractMonth = FuturesOptionsExpiryFunctions.GetFutureContractMonth(canonicalFutureSymbol, expirationDate);
-                        var futureExpiry = FuturesExpiryFunctions.FuturesExpiryFunction(canonicalFutureSymbol)(futureContractMonth);
+                        var future = _futuresOptionsUnderlyingMapper.GetUnderlyingFutureFromFutureOption(
+                            GetLeanRootSymbol(brokerageSymbol),
+                            market,
+                            expirationDate,
+                            DateTime.Now);
+
+                        if (future == null)
+                        {
+                            // This is the worst case scenario, because we didn't find a matching futures contract for the FOP.
+                            // Note that this only applies to CBOT symbols for now.
+                            throw new ArgumentException($"The Future Option with expected underlying of {future} with expiry: {expirationDate:yyyy-MM-dd} has no matching underlying future contract.");
+                        }
 
                         return Symbol.CreateOption(
-                            Symbol.CreateFuture(
-                                brokerageSymbol,
-                                market,
-                                futureExpiry),
+                            future,
                             market,
                             OptionStyle.American,
                             optionRight,
