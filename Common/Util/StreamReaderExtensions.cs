@@ -175,5 +175,149 @@ namespace QuantConnect.Util
 
             return result == null ? string.Empty : result.ToString();
         }
+        
+        /// <summary>
+        /// Gets a decimal from the provided stream reader
+        /// </summary>
+        /// <param name="stream">The data stream</param>
+        /// <param name="delimiter">The data delimiter character to use, default is ','</param>
+        /// <param name="pastEndLine">True if end line was past, useful for consumers to know a line ended</param>
+        /// <returns>The decimal read from the stream</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static decimal GetDecimal(this ReadOnlySpan<char> stream)
+        {
+            long value = 0;
+            var decimalPlaces = 0;
+            var hasDecimals = false;
+            var i = 0;
+            var current = (char) stream[i++];
+
+            while (current == ' ')
+            {
+                current = (char)stream[i++];
+            }
+
+            var isNegative = current == '-';
+            if (isNegative)
+            {
+                current = (char)stream[i++];
+            }
+
+            var endReached = false;
+            while (!endReached)
+            {
+                endReached = i == stream.Length;
+                
+                if (current == '.')
+                {
+                    hasDecimals = true;
+                    decimalPlaces = 0;
+                }
+                else
+                {
+                    value = value * 10 + (current - '0');
+                    decimalPlaces++;
+                }
+                if (!endReached)
+                {
+                    current = (char) stream[i++];
+                }
+            }
+
+            var lo = (int)value;
+            var mid = (int)(value >> 32);
+            return new decimal(lo, mid, 0, isNegative, (byte)(hasDecimals ? decimalPlaces : 0));
+        }
+
+        /// <summary>
+        /// Gets a date time instance from a stream reader
+        /// </summary>
+        /// <param name="stream">The data stream</param>
+        /// <param name="format">The format in which the date time is</param>
+        /// <param name="delimiter">The data delimiter character to use, default is ','</param>
+        /// <returns>The date time instance read</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static DateTime GetDateTime(this ReadOnlySpan<char> stream, string format)
+        {
+            var i = 0;
+            var current = (char)stream[i++];
+            while (current == ' ')
+            {
+                current = (char)stream[i++];
+            }
+
+            var builder = new StringBuilder(12);
+            while (i < stream.Length)
+            {
+                builder.Append(current);
+                current = (char)stream[i++];
+            }
+
+            return DateTime.ParseExact(builder.ToString(),
+                format,
+                CultureInfo.InvariantCulture);
+        }
+
+        /// <summary>
+        /// Gets an integer from a stream reader
+        /// </summary>
+        /// <param name="stream">The data stream</param>
+        /// <param name="delimiter">The data delimiter character to use, default is ','</param>
+        /// <returns>The integer instance read</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int GetInt32(this ReadOnlySpan<char> stream)
+        {
+            var i = 0;
+            var result = 0;
+            var current = (char)stream[i++];
+
+            while (current == ' ')
+            {
+                current = (char)stream[i++];
+            }
+
+            var isNegative = current == '-';
+            if (isNegative)
+            {
+                current = (char)stream[i++];
+            }
+
+            var endReached = false;
+            while (!endReached)
+            {
+                endReached = i == stream.Length;
+                result = (current - '0') + result * 10;
+                if (!endReached)
+                {
+                    current = (char) stream[i++];
+                }
+            }
+            return isNegative ? result * -1 : result;
+        }
+
+        /// <summary>
+        /// Gets a string from a stream reader
+        /// </summary>
+        /// <param name="stream">The data stream</param>
+        /// <param name="delimiter">The data delimiter character to use, default is ','</param>
+        /// <returns>The string instance read</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static string GetString(this ReadOnlySpan<char> stream, char delimiter = DefaultDelimiter)
+        {
+            return stream.ToString();
+        }
+
+        public static ReadOnlySpan<char> ParseChunk(ref Span<char> span, ref int scanned, ref int position, out bool entriesRemaining)
+        {
+            scanned += position + 1;
+            position = span.Slice(scanned, span.Length - scanned).IndexOf(',');
+            entriesRemaining = !(position < 0);
+            if (!entriesRemaining)
+            {
+                position = span.Slice(scanned, span.Length - scanned).Length;
+            }
+            
+            return span.Slice(scanned, position);
+        }
     }
 }

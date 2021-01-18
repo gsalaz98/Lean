@@ -14,12 +14,17 @@
 */
 
 using System;
+using System.Buffers;
 using System.IO;
 using System.Linq;
 using QuantConnect.Data;
 using QuantConnect.Interfaces;
 using QuantConnect.Data.Market;
 using System.Collections.Generic;
+using System.IO.Pipelines;
+using System.Text;
+using System.Threading.Tasks;
+using Fasterflect;
 using QuantConnect.Data.Fundamental;
 using QuantConnect.Data.UniverseSelection;
 using QuantConnect.Logging;
@@ -34,6 +39,7 @@ namespace QuantConnect.Lean.Engine.DataFeeds
     public class TextSubscriptionDataSourceReader : BaseSubscriptionDataSourceReader
     {
         private readonly bool _implementsStreamReader;
+        private readonly bool _implementsSpanParsing;
         private readonly DateTime _date;
         private readonly SubscriptionDataConfig _config;
         private BaseData _factory;
@@ -82,6 +88,11 @@ namespace QuantConnect.Lean.Engine.DataFeeds
             {
                 _implementsStreamReader = true;
             }
+
+            if (_config.Type == typeof(Tick))
+            {
+                _implementsSpanParsing = true;
+            }
             else
             {
                 var method = _config.Type.GetMethod("Reader",
@@ -128,14 +139,43 @@ namespace QuantConnect.Lean.Engine.DataFeeds
                         // only create a factory if the stream isn't null
                         _factory = _config.GetBaseDataInstance();
                     }
+                    
                     // while the reader has data
+                    PipeReader pipeReader = null;
+                    ReadResult read = default(ReadResult);
+                    ReadOnlySequence<byte> buffer = default(ReadOnlySequence<byte>);
+                    if (reader.StreamReader != null && _implementsSpanParsing)
+                    {
+                        pipeReader = PipeReader.Create(new MemoryStream(((MemoryStream)reader.StreamReader.BaseStream).GetBuffer()));
+                        read = pipeReader.ReadAsync().GetAwaiter().GetResult();
+                        buffer = read.Buffer;
+                    }
+                    
                     while (!reader.EndOfStream)
                     {
                         BaseData instance = null;
                         string line = null;
                         try
                         {
-                            if (reader.StreamReader != null && _implementsStreamReader)
+                            if (_implementsSpanParsing)
+                            {
+                                ReadOnlySequence<byte> sequence;
+                                if (!TryReadLine(ref buffer, out sequence))
+                                {
+                                    pipeReader.AdvanceTo(buffer.Start, buffer.End);
+                                    if (read.IsCompleted)
+                                    {
+                                        break;
+                                    }
+
+                                    read = pipeReader.ReadAsync().GetAwaiter().GetResult();
+                                    buffer = read.Buffer;
+                                    continue;
+                                }
+
+                                instance = ProcessSequence(_factory, _config, _date, sequence);
+                            }
+                            else if (_implementsStreamReader)
                             {
                                 instance = _factory.Reader(_config, reader.StreamReader, _date, IsLiveMode);
                             }
@@ -261,6 +301,39 @@ namespace QuantConnect.Lean.Engine.DataFeeds
                 CacheSize = megaBytesToUse / 12;
                 Log.Trace($"TextSubscriptionDataSourceReader.SetCacheSize(): Setting cache size to {CacheSize} items");
             }
+        }
+
+        private static bool TryReadLine(ref ReadOnlySequence<byte> buffer, out ReadOnlySequence<byte> sequence)
+        {
+            var newLinePosition = buffer.PositionOf((byte) '\n');
+            if (newLinePosition == null) 
+            {
+                sequence = default(ReadOnlySequence<byte>);
+                return false;
+            }
+
+            sequence = buffer.Slice(0, newLinePosition.Value);
+            buffer = buffer.Slice(buffer.GetPosition(1, newLinePosition.Value));
+            
+            return true;
+        }
+
+        private BaseData ProcessSequence(BaseData factory, SubscriptionDataConfig config, DateTime date, ReadOnlySequence<byte> sequence)
+        {
+            Span<byte> span = stackalloc byte[(int)sequence.Length];
+            Span<char> chars = stackalloc char[span.Length];
+            sequence.CopyTo(span);
+
+            unsafe
+            {
+                fixed (byte* bytePtr = &span.GetPinnableReference())
+                fixed (char* charPtr = &chars.GetPinnableReference())
+                {
+                    Encoding.UTF8.GetChars(bytePtr, span.Length, charPtr, chars.Length);
+                }
+            }
+
+            return factory.Reader(config, chars, date, IsLiveMode);
         }
     }
 }

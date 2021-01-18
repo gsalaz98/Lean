@@ -164,6 +164,11 @@ namespace QuantConnect.Data
             throw new NotImplementedException("Each data types has to implement is own Stream reader");
         }
 
+        public virtual BaseData Reader(SubscriptionDataConfig config, Span<char> stream, DateTime date, bool isLiveMode)
+        {
+            throw new NotImplementedException("Each data type has to implement its own ReadOnlySpan<T> reader");
+        }
+
         /// <summary>
         /// Return the URL string source of the file. This will be converted to a stream
         /// </summary>

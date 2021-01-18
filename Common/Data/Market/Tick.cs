@@ -427,6 +427,150 @@ namespace QuantConnect.Data.Market
                 Log.Error(err);
             }
         }
+        
+        /// <summary>
+        /// Parse a tick data line from quantconnect zip source files.
+        /// </summary>
+        /// <param name="reader">The source stream reader</param>
+        /// <param name="date">Base date for the tick (ticks date is stored as int milliseconds since midnight)</param>
+        /// <param name="config">Subscription configuration object</param>
+        public Tick(SubscriptionDataConfig config, Span<char> reader, DateTime date)
+        {
+            var scanned = -1;
+            var position = 0;
+            
+            try
+            {
+                bool entriesRemaining;
+                DataType = MarketDataType.Tick;
+                Symbol = config.Symbol;
+
+                // Which security type is this data feed:
+                var scaleFactor = GetScaleFactor(config.Symbol);
+
+                switch (config.SecurityType)
+                {
+                    case SecurityType.Equity:
+                        {
+                            TickType = config.TickType;
+                            var timeInMilliseconds = (double)StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal();
+                            Time = date.Date.AddMilliseconds(timeInMilliseconds).ConvertTo(config.DataTimeZone, config.ExchangeTimeZone);
+
+                            if (TickType == TickType.Trade)
+                            {
+                                Value = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal() / scaleFactor;
+                                Quantity = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal();
+                                
+                                if (entriesRemaining)
+                                {
+                                    Exchange = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetString();
+                                    SaleCondition = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetString();
+                                    Suspicious = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetInt32() == 1;
+                                }
+                            }
+                            else if (TickType == TickType.Quote)
+                            {
+                                BidPrice = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal() / scaleFactor;
+                                BidSize = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal();
+                                AskPrice = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal() / scaleFactor;
+                                AskSize = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal();
+
+                                SetValue();
+                                
+                                if (entriesRemaining)
+                                {
+                                    Exchange = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetString();
+                                    SaleCondition = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetString();
+                                    Suspicious = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetInt32() == 1;
+                                }
+                            }
+                            else
+                            {
+                                throw new InvalidOperationException($"Tick(): Unexpected tick type {TickType}");
+                            }
+                            break;
+                        }
+
+                    case SecurityType.Forex:
+                    case SecurityType.Cfd:
+                        {
+                            TickType = TickType.Quote;
+                            Time = date.Date.AddMilliseconds((double) StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal())
+                                .ConvertTo(config.DataTimeZone, config.ExchangeTimeZone);
+                            BidPrice = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal();
+                            AskPrice = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal();
+
+                            SetValue();
+                            break;
+                        }
+
+                    case SecurityType.Crypto:
+                        {
+                            TickType = config.TickType;
+                            Exchange = config.Market;
+
+                            if (TickType == TickType.Trade)
+                            {
+                                Time = date.Date.AddMilliseconds((double)StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal())
+                                    .ConvertTo(config.DataTimeZone, config.ExchangeTimeZone);
+                                Value = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal();
+                                Quantity = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal();
+                            }
+
+                            if (TickType == TickType.Quote)
+                            {
+                                Time = date.Date.AddMilliseconds((double)StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal())
+                                    .ConvertTo(config.DataTimeZone, config.ExchangeTimeZone);
+                                BidPrice = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal();
+                                BidSize = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal();
+                                AskPrice = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal();
+                                AskSize = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal();
+
+                                SetValue();
+                            }
+                            break;
+                        }
+                    case SecurityType.Future:
+                    case SecurityType.Option:
+                    case SecurityType.FutureOption:
+                        {
+                            TickType = config.TickType;
+                            Time = date.Date.AddMilliseconds((double)StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal())
+                                .ConvertTo(config.DataTimeZone, config.ExchangeTimeZone);
+
+                            if (TickType == TickType.Trade)
+                            {
+                                Value = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal() / scaleFactor;
+                                Quantity = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal();
+                                Exchange = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetString();
+                                SaleCondition = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetString();
+                                Suspicious = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetInt32() == 1;
+                            }
+                            else if (TickType == TickType.OpenInterest)
+                            {
+                                Value = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal();
+                            }
+                            else
+                            {
+                                BidPrice = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal() / scaleFactor;
+                                BidSize = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal();
+                                AskPrice = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal() / scaleFactor;
+                                AskSize = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal();
+                                Exchange = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetString();
+                                Suspicious = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetInt32() == 1;
+
+                                SetValue();
+                            }
+
+                            break;
+                        }
+                }
+            }
+            catch (Exception err)
+            {
+                Log.Error(err);
+            }
+        }
 
         /// <summary>
         /// Parse a tick data line from quantconnect zip source files.
@@ -607,6 +751,25 @@ namespace QuantConnect.Data.Market
         /// <param name="isLiveMode">true if we're in live mode, false for backtesting mode</param>
         /// <returns>New Initialized tick</returns>
         public override BaseData Reader(SubscriptionDataConfig config, StreamReader reader, DateTime date, bool isLiveMode)
+        {
+            if (isLiveMode)
+            {
+                // currently ticks don't come through the reader function
+                return new Tick();
+            }
+
+            return new Tick(config, reader, date);
+        }
+        
+        /// <summary>
+        /// Tick implementation of reader method: read a line of data from the source and convert it to a tick object.
+        /// </summary>
+        /// <param name="config">Subscription configuration object for algorithm</param>
+        /// <param name="reader">The source stack allocated char array</param>
+        /// <param name="date">Date of this reader request</param>
+        /// <param name="isLiveMode">true if we're in live mode, false for backtesting mode</param>
+        /// <returns>New Initialized tick</returns>
+        public override BaseData Reader(SubscriptionDataConfig config, Span<char> reader, DateTime date, bool isLiveMode)
         {
             if (isLiveMode)
             {
