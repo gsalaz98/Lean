@@ -184,12 +184,11 @@ namespace QuantConnect.Util
         /// <param name="pastEndLine">True if end line was past, useful for consumers to know a line ended</param>
         /// <returns>The decimal read from the stream</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static decimal GetDecimal(this ReadOnlySpan<char> stream)
+        public static decimal GetDecimal(this ReadOnlySpan<char> stream, ref int i)
         {
             long value = 0;
             var decimalPlaces = 0;
             var hasDecimals = false;
-            var i = 0;
             var current = (char) stream[i++];
 
             while (current == ' ')
@@ -204,7 +203,7 @@ namespace QuantConnect.Util
             }
 
             var endReached = false;
-            while (!endReached)
+            while (!endReached && current != ',')
             {
                 endReached = i == stream.Length;
                 
@@ -224,38 +223,14 @@ namespace QuantConnect.Util
                 }
             }
 
+            if (current != ',')
+            {
+                i = -1;
+            }
+            
             var lo = (int)value;
             var mid = (int)(value >> 32);
             return new decimal(lo, mid, 0, isNegative, (byte)(hasDecimals ? decimalPlaces : 0));
-        }
-
-        /// <summary>
-        /// Gets a date time instance from a stream reader
-        /// </summary>
-        /// <param name="stream">The data stream</param>
-        /// <param name="format">The format in which the date time is</param>
-        /// <param name="delimiter">The data delimiter character to use, default is ','</param>
-        /// <returns>The date time instance read</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static DateTime GetDateTime(this ReadOnlySpan<char> stream, string format)
-        {
-            var i = 0;
-            var current = (char)stream[i++];
-            while (current == ' ')
-            {
-                current = (char)stream[i++];
-            }
-
-            var builder = new StringBuilder(12);
-            while (i < stream.Length)
-            {
-                builder.Append(current);
-                current = (char)stream[i++];
-            }
-
-            return DateTime.ParseExact(builder.ToString(),
-                format,
-                CultureInfo.InvariantCulture);
         }
 
         /// <summary>
@@ -265,9 +240,8 @@ namespace QuantConnect.Util
         /// <param name="delimiter">The data delimiter character to use, default is ','</param>
         /// <returns>The integer instance read</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int GetInt32(this ReadOnlySpan<char> stream)
+        public static int GetInt32(this ReadOnlySpan<char> stream, ref int i)
         {
-            var i = 0;
             var result = 0;
             var current = (char)stream[i++];
 
@@ -283,7 +257,7 @@ namespace QuantConnect.Util
             }
 
             var endReached = false;
-            while (!endReached)
+            while (!endReached && current != ',')
             {
                 endReached = i == stream.Length;
                 result = (current - '0') + result * 10;
@@ -292,6 +266,12 @@ namespace QuantConnect.Util
                     current = (char) stream[i++];
                 }
             }
+
+            if (current != ',')
+            {
+                i = -1;
+            }
+            
             return isNegative ? result * -1 : result;
         }
 
@@ -302,22 +282,20 @@ namespace QuantConnect.Util
         /// <param name="delimiter">The data delimiter character to use, default is ','</param>
         /// <returns>The string instance read</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static string GetString(this ReadOnlySpan<char> stream, char delimiter = DefaultDelimiter)
+        public static string GetString(this ReadOnlySpan<char> stream, ref int i)
         {
-            return stream.ToString();
-        }
-
-        public static ReadOnlySpan<char> ParseChunk(ref Span<char> span, ref int scanned, ref int position, out bool entriesRemaining)
-        {
-            scanned += position + 1;
-            position = span.Slice(scanned, span.Length - scanned).IndexOf(',');
-            entriesRemaining = !(position < 0);
-            if (!entriesRemaining)
+            var start = i;
+            for (var j = i; j < stream.Length; j++)
             {
-                position = span.Slice(scanned, span.Length - scanned).Length;
+                i++;
+                if (stream[j] == ',')
+                {
+                    return stream.Slice(start, j - start).ToString();
+                }
             }
-            
-            return span.Slice(scanned, position);
+
+            i = -1;
+            return stream.Slice(start).ToString();
         }
     }
 }

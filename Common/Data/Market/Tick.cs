@@ -434,10 +434,9 @@ namespace QuantConnect.Data.Market
         /// <param name="reader">The source stream reader</param>
         /// <param name="date">Base date for the tick (ticks date is stored as int milliseconds since midnight)</param>
         /// <param name="config">Subscription configuration object</param>
-        public Tick(SubscriptionDataConfig config, Span<char> reader, DateTime date)
+        public Tick(SubscriptionDataConfig config, ReadOnlySpan<char> reader, DateTime date)
         {
-            var scanned = -1;
-            var position = 0;
+            var index = 0;
             
             try
             {
@@ -453,35 +452,35 @@ namespace QuantConnect.Data.Market
                     case SecurityType.Equity:
                         {
                             TickType = config.TickType;
-                            var timeInMilliseconds = (double)StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal();
+                            var timeInMilliseconds = (double) reader.GetDecimal(ref index);
                             Time = date.Date.AddMilliseconds(timeInMilliseconds).ConvertTo(config.DataTimeZone, config.ExchangeTimeZone);
 
                             if (TickType == TickType.Trade)
                             {
-                                Value = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal() / scaleFactor;
-                                Quantity = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal();
+                                Value = reader.GetDecimal(ref index) / scaleFactor;
+                                Quantity = reader.GetDecimal(ref index);
                                 
-                                if (entriesRemaining)
+                                if (index != -1)
                                 {
-                                    Exchange = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetString();
-                                    SaleCondition = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetString();
-                                    Suspicious = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetInt32() == 1;
+                                    Exchange = reader.GetString(ref index);
+                                    SaleCondition = reader.GetString(ref index);
+                                    Suspicious = reader.GetInt32(ref index) == 1;
                                 }
                             }
                             else if (TickType == TickType.Quote)
                             {
-                                BidPrice = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal() / scaleFactor;
-                                BidSize = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal();
-                                AskPrice = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal() / scaleFactor;
-                                AskSize = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal();
+                                BidPrice = reader.GetDecimal(ref index) / scaleFactor;
+                                BidSize = reader.GetDecimal(ref index);
+                                AskPrice = reader.GetDecimal(ref index) / scaleFactor;
+                                AskSize = reader.GetDecimal(ref index);
 
                                 SetValue();
                                 
-                                if (entriesRemaining)
+                                if (index != -1)
                                 {
-                                    Exchange = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetString();
-                                    SaleCondition = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetString();
-                                    Suspicious = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetInt32() == 1;
+                                    Exchange = reader.GetString(ref index);
+                                    SaleCondition = reader.GetString(ref index);
+                                    Suspicious = reader.GetInt32(ref index) == 1;
                                 }
                             }
                             else
@@ -495,10 +494,10 @@ namespace QuantConnect.Data.Market
                     case SecurityType.Cfd:
                         {
                             TickType = TickType.Quote;
-                            Time = date.Date.AddMilliseconds((double) StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal())
+                            Time = date.Date.AddMilliseconds((double) reader.GetDecimal(ref index))
                                 .ConvertTo(config.DataTimeZone, config.ExchangeTimeZone);
-                            BidPrice = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal();
-                            AskPrice = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal();
+                            BidPrice = reader.GetDecimal(ref index);
+                            AskPrice = reader.GetDecimal(ref index);
 
                             SetValue();
                             break;
@@ -511,20 +510,20 @@ namespace QuantConnect.Data.Market
 
                             if (TickType == TickType.Trade)
                             {
-                                Time = date.Date.AddMilliseconds((double)StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal())
+                                Time = date.Date.AddMilliseconds((double)reader.GetDecimal(ref index))
                                     .ConvertTo(config.DataTimeZone, config.ExchangeTimeZone);
-                                Value = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal();
-                                Quantity = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal();
+                                Value = reader.GetDecimal(ref index);
+                                Quantity = reader.GetDecimal(ref index);
                             }
 
                             if (TickType == TickType.Quote)
                             {
-                                Time = date.Date.AddMilliseconds((double)StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal())
+                                Time = date.Date.AddMilliseconds((double)reader.GetDecimal(ref index))
                                     .ConvertTo(config.DataTimeZone, config.ExchangeTimeZone);
-                                BidPrice = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal();
-                                BidSize = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal();
-                                AskPrice = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal();
-                                AskSize = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal();
+                                BidPrice = reader.GetDecimal(ref index);
+                                BidSize = reader.GetDecimal(ref index);
+                                AskPrice = reader.GetDecimal(ref index);
+                                AskSize = reader.GetDecimal(ref index);
 
                                 SetValue();
                             }
@@ -535,29 +534,29 @@ namespace QuantConnect.Data.Market
                     case SecurityType.FutureOption:
                         {
                             TickType = config.TickType;
-                            Time = date.Date.AddMilliseconds((double)StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal())
+                            Time = date.Date.AddMilliseconds((double)reader.GetDecimal(ref index))
                                 .ConvertTo(config.DataTimeZone, config.ExchangeTimeZone);
 
                             if (TickType == TickType.Trade)
                             {
-                                Value = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal() / scaleFactor;
-                                Quantity = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal();
-                                Exchange = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetString();
-                                SaleCondition = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetString();
-                                Suspicious = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetInt32() == 1;
+                                Value = reader.GetDecimal(ref index) / scaleFactor;
+                                Quantity = reader.GetDecimal(ref index);
+                                Exchange = reader.GetString(ref index);
+                                SaleCondition = reader.GetString(ref index);
+                                Suspicious = reader.GetInt32(ref index) == 1;
                             }
                             else if (TickType == TickType.OpenInterest)
                             {
-                                Value = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal();
+                                Value = reader.GetDecimal(ref index);
                             }
                             else
                             {
-                                BidPrice = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal() / scaleFactor;
-                                BidSize = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal();
-                                AskPrice = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal() / scaleFactor;
-                                AskSize = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetDecimal();
-                                Exchange = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetString();
-                                Suspicious = StreamReaderExtensions.ParseChunk(ref reader, ref scanned, ref position, out entriesRemaining).GetInt32() == 1;
+                                BidPrice = reader.GetDecimal(ref index) / scaleFactor;
+                                BidSize = reader.GetDecimal(ref index);
+                                AskPrice = reader.GetDecimal(ref index) / scaleFactor;
+                                AskSize = reader.GetDecimal(ref index);
+                                Exchange = reader.GetString(ref index);
+                                Suspicious = reader.GetInt32(ref index) == 1;
 
                                 SetValue();
                             }
@@ -769,7 +768,7 @@ namespace QuantConnect.Data.Market
         /// <param name="date">Date of this reader request</param>
         /// <param name="isLiveMode">true if we're in live mode, false for backtesting mode</param>
         /// <returns>New Initialized tick</returns>
-        public override BaseData Reader(SubscriptionDataConfig config, Span<char> reader, DateTime date, bool isLiveMode)
+        public override BaseData Reader(SubscriptionDataConfig config, ReadOnlySpan<char> reader, DateTime date, bool isLiveMode)
         {
             if (isLiveMode)
             {

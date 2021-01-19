@@ -22,6 +22,8 @@ using QuantConnect.Interfaces;
 using QuantConnect.Data.Market;
 using System.Collections.Generic;
 using System.IO.Pipelines;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using Fasterflect;
@@ -303,6 +305,7 @@ namespace QuantConnect.Lean.Engine.DataFeeds
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool TryReadLine(ref ReadOnlySequence<byte> buffer, out ReadOnlySequence<byte> sequence)
         {
             var newLinePosition = buffer.PositionOf((byte) '\n');
@@ -318,19 +321,21 @@ namespace QuantConnect.Lean.Engine.DataFeeds
             return true;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private BaseData ProcessSequence(BaseData factory, SubscriptionDataConfig config, DateTime date, ReadOnlySequence<byte> sequence)
         {
-            Span<byte> span = stackalloc byte[(int)sequence.Length];
-            Span<char> chars = stackalloc char[span.Length];
-            sequence.CopyTo(span);
-
-            unsafe
+            Span<byte> allocSpan = sequence.IsSingleSegment ? Span<byte>.Empty : stackalloc byte[(int) sequence.Length];
+            if (!sequence.IsSingleSegment)
             {
-                fixed (byte* bytePtr = &span.GetPinnableReference())
-                fixed (char* charPtr = &chars.GetPinnableReference())
-                {
-                    Encoding.UTF8.GetChars(bytePtr, span.Length, charPtr, chars.Length);
-                }
+                sequence.CopyTo(allocSpan);
+            }
+
+            ReadOnlySpan<byte> span = sequence.IsSingleSegment ? sequence.First.Span : allocSpan;
+            Span<char> chars = stackalloc char[span.Length];
+            
+            for (var i = 0; i < span.Length; ++i) 
+            {
+                chars[i] = (char) span[i];
             }
 
             return factory.Reader(config, chars, date, IsLiveMode);
