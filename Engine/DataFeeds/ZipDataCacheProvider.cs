@@ -22,6 +22,7 @@ using System.Linq;
 using System.Threading;
 using Ionic.Zip;
 using Ionic.Zlib;
+using Microsoft.IO;
 using QuantConnect.Interfaces;
 using QuantConnect.Util;
 
@@ -36,6 +37,7 @@ namespace QuantConnect.Lean.Engine.DataFeeds
 
         // ZipArchive cache used by the class
         private readonly ConcurrentDictionary<string, CachedZipFile> _zipFileCache = new ConcurrentDictionary<string, CachedZipFile>();
+        private readonly RecyclableMemoryStreamManager _streamManager;
         private readonly IDataProvider _dataProvider;
         private readonly Timer _cacheCleaner;
 
@@ -51,6 +53,7 @@ namespace QuantConnect.Lean.Engine.DataFeeds
         {
             IsDataEphemeral = isDataEphemeral;
             _dataProvider = dataProvider;
+            _streamManager = new RecyclableMemoryStreamManager();
             _cacheCleaner = new Timer(state => CleanCache(), null, TimeSpan.FromSeconds(CacheSeconds), Timeout.InfiniteTimeSpan);
         }
 
@@ -255,11 +258,14 @@ namespace QuantConnect.Lean.Engine.DataFeeds
 
             if (entry != null)
             {
-                var stream = new MemoryStream();
 
                 try
                 {
-                    stream.SetLength(entry.UncompressedSize);
+                    var stream = new RecyclableMemoryStream(_streamManager, "ZipDataCacheProvider", (int)entry.UncompressedSize);
+                    // extract directly into the stream
+                    entry.Extract(stream);
+                    stream.Position = 0;
+                    return stream;
                 }
                 catch (ArgumentOutOfRangeException)
                 {
@@ -297,11 +303,6 @@ namespace QuantConnect.Lean.Engine.DataFeeds
                         zipEntry = zipStream.GetNextEntry();
                     }
                 }
-
-                // extract directly into the stream
-                entry.Extract(stream);
-                stream.Position = 0;
-                return stream;
             }
 
             return null;

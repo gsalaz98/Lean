@@ -427,17 +427,17 @@ namespace QuantConnect.Data.Market
                 Log.Error(err);
             }
         }
-        
+
         /// <summary>
         /// Parse a tick data line from quantconnect zip source files.
         /// </summary>
         /// <param name="reader">The source stream reader</param>
         /// <param name="date">Base date for the tick (ticks date is stored as int milliseconds since midnight)</param>
         /// <param name="config">Subscription configuration object</param>
-        public Tick(SubscriptionDataConfig config, ReadOnlySpan<char> reader, DateTime date)
+        public Tick(SubscriptionDataConfig config, ReadOnlySpan<byte> reader, DateTime date)
         {
             var index = 0;
-            
+
             try
             {
                 bool entriesRemaining;
@@ -459,7 +459,7 @@ namespace QuantConnect.Data.Market
                             {
                                 Value = reader.GetDecimal(ref index) / scaleFactor;
                                 Quantity = reader.GetDecimal(ref index);
-                                
+
                                 if (index != -1)
                                 {
                                     Exchange = reader.GetString(ref index);
@@ -475,7 +475,7 @@ namespace QuantConnect.Data.Market
                                 AskSize = reader.GetDecimal(ref index);
 
                                 SetValue();
-                                
+
                                 if (index != -1)
                                 {
                                     Exchange = reader.GetString(ref index);
@@ -759,7 +759,7 @@ namespace QuantConnect.Data.Market
 
             return new Tick(config, reader, date);
         }
-        
+
         /// <summary>
         /// Tick implementation of reader method: read a line of data from the source and convert it to a tick object.
         /// </summary>
@@ -768,7 +768,7 @@ namespace QuantConnect.Data.Market
         /// <param name="date">Date of this reader request</param>
         /// <param name="isLiveMode">true if we're in live mode, false for backtesting mode</param>
         /// <returns>New Initialized tick</returns>
-        public override BaseData Reader(SubscriptionDataConfig config, ReadOnlySpan<char> reader, DateTime date, bool isLiveMode)
+        public override BaseData Reader(SubscriptionDataConfig config, ReadOnlySpan<byte> reader, DateTime date, bool isLiveMode)
         {
             if (isLiveMode)
             {

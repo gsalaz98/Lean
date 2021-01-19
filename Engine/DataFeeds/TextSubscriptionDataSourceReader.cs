@@ -40,6 +40,7 @@ namespace QuantConnect.Lean.Engine.DataFeeds
     /// </summary>
     public class TextSubscriptionDataSourceReader : BaseSubscriptionDataSourceReader
     {
+        private readonly MemoryPool<byte> _memoryPool;
         private readonly bool _implementsStreamReader;
         private readonly bool _implementsSpanParsing;
         private readonly DateTime _date;
@@ -81,6 +82,7 @@ namespace QuantConnect.Lean.Engine.DataFeeds
         {
             _date = date;
             _config = config;
+            _memoryPool = MemoryPool<byte>.Shared;
             _shouldCacheDataPoints = !_config.IsCustomData && _config.Resolution >= Resolution.Hour
                 && _config.Type != typeof(FineFundamental) && _config.Type != typeof(CoarseFundamental)
                 && !DataCacheProvider.IsDataEphemeral;
@@ -141,18 +143,20 @@ namespace QuantConnect.Lean.Engine.DataFeeds
                         // only create a factory if the stream isn't null
                         _factory = _config.GetBaseDataInstance();
                     }
-                    
+
                     // while the reader has data
                     PipeReader pipeReader = null;
                     ReadResult read = default(ReadResult);
                     ReadOnlySequence<byte> buffer = default(ReadOnlySequence<byte>);
                     if (reader.StreamReader != null && _implementsSpanParsing)
                     {
-                        pipeReader = PipeReader.Create(new MemoryStream(((MemoryStream)reader.StreamReader.BaseStream).GetBuffer()));
+                        var baseStream = reader.StreamReader.BaseStream;
+                        baseStream.Position = 0;
+                        pipeReader = PipeReader.Create(baseStream, new StreamPipeReaderOptions(_memoryPool));
                         read = pipeReader.ReadAsync().GetAwaiter().GetResult();
                         buffer = read.Buffer;
                     }
-                    
+
                     while (!reader.EndOfStream)
                     {
                         BaseData instance = null;
@@ -309,7 +313,7 @@ namespace QuantConnect.Lean.Engine.DataFeeds
         private static bool TryReadLine(ref ReadOnlySequence<byte> buffer, out ReadOnlySequence<byte> sequence)
         {
             var newLinePosition = buffer.PositionOf((byte) '\n');
-            if (newLinePosition == null) 
+            if (newLinePosition == null)
             {
                 sequence = default(ReadOnlySequence<byte>);
                 return false;
@@ -317,7 +321,7 @@ namespace QuantConnect.Lean.Engine.DataFeeds
 
             sequence = buffer.Slice(0, newLinePosition.Value);
             buffer = buffer.Slice(buffer.GetPosition(1, newLinePosition.Value));
-            
+
             return true;
         }
 
@@ -331,14 +335,7 @@ namespace QuantConnect.Lean.Engine.DataFeeds
             }
 
             ReadOnlySpan<byte> span = sequence.IsSingleSegment ? sequence.First.Span : allocSpan;
-            Span<char> chars = stackalloc char[span.Length];
-            
-            for (var i = 0; i < span.Length; ++i) 
-            {
-                chars[i] = (char) span[i];
-            }
-
-            return factory.Reader(config, chars, date, IsLiveMode);
+            return factory.Reader(config, span, date, IsLiveMode);
         }
     }
 }

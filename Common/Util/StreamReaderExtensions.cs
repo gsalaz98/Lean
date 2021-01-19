@@ -17,6 +17,7 @@ using System;
 using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace QuantConnect.Util
@@ -175,7 +176,7 @@ namespace QuantConnect.Util
 
             return result == null ? string.Empty : result.ToString();
         }
-        
+
         /// <summary>
         /// Gets a decimal from the provided stream reader
         /// </summary>
@@ -184,7 +185,7 @@ namespace QuantConnect.Util
         /// <param name="pastEndLine">True if end line was past, useful for consumers to know a line ended</param>
         /// <returns>The decimal read from the stream</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static decimal GetDecimal(this ReadOnlySpan<char> stream, ref int i)
+        public static decimal GetDecimal(this ReadOnlySpan<byte> stream, ref int i)
         {
             long value = 0;
             var decimalPlaces = 0;
@@ -206,7 +207,7 @@ namespace QuantConnect.Util
             while (!endReached && current != ',')
             {
                 endReached = i == stream.Length;
-                
+
                 if (current == '.')
                 {
                     hasDecimals = true;
@@ -227,7 +228,7 @@ namespace QuantConnect.Util
             {
                 i = -1;
             }
-            
+
             var lo = (int)value;
             var mid = (int)(value >> 32);
             return new decimal(lo, mid, 0, isNegative, (byte)(hasDecimals ? decimalPlaces : 0));
@@ -240,7 +241,7 @@ namespace QuantConnect.Util
         /// <param name="delimiter">The data delimiter character to use, default is ','</param>
         /// <returns>The integer instance read</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int GetInt32(this ReadOnlySpan<char> stream, ref int i)
+        public static int GetInt32(this ReadOnlySpan<byte> stream, ref int i)
         {
             var result = 0;
             var current = (char)stream[i++];
@@ -271,7 +272,7 @@ namespace QuantConnect.Util
             {
                 i = -1;
             }
-            
+
             return isNegative ? result * -1 : result;
         }
 
@@ -282,20 +283,32 @@ namespace QuantConnect.Util
         /// <param name="delimiter">The data delimiter character to use, default is ','</param>
         /// <returns>The string instance read</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static string GetString(this ReadOnlySpan<char> stream, ref int i)
+        public static string GetString(this ReadOnlySpan<byte> stream, ref int i)
         {
+            var byteSpan = MemoryMarshal.Cast<byte, sbyte>(stream);
+
             var start = i;
-            for (var j = i; j < stream.Length; j++)
+            var index = stream.Slice(i).IndexOf((byte)',');
+
+            if (index != -1)
             {
-                i++;
-                if (stream[j] == ',')
-                {
-                    return stream.Slice(start, j - start).ToString();
-                }
+                i += index + 1;
+                return byteSpan.AsString(start, index);
             }
 
-            i = -1;
-            return stream.Slice(start).ToString();
+            i = index;
+            return byteSpan.AsString(start, byteSpan.Length - start);
+        }
+
+        private static string AsString(this ReadOnlySpan<sbyte> bytes, int start, int length)
+        {
+            unsafe
+            {
+            fixed (sbyte* bytePtr = &bytes.GetPinnableReference())
+            {
+                return new string(bytePtr, start, length);
+            }
+            }
         }
     }
 }
