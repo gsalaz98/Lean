@@ -151,8 +151,7 @@ namespace QuantConnect.Lean.Engine.DataFeeds
                     if (reader.StreamReader != null && _implementsSpanParsing)
                     {
                         var baseStream = reader.StreamReader.BaseStream;
-                        baseStream.Position = 0;
-                        pipeReader = PipeReader.Create(baseStream, new StreamPipeReaderOptions(_memoryPool));
+                        pipeReader = PipeReader.Create(baseStream, new StreamPipeReaderOptions(_memoryPool, leaveOpen: true));
                         read = pipeReader.ReadAsync().GetAwaiter().GetResult();
                         buffer = read.Buffer;
                     }

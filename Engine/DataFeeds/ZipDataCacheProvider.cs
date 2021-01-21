@@ -261,11 +261,7 @@ namespace QuantConnect.Lean.Engine.DataFeeds
 
                 try
                 {
-                    var stream = new RecyclableMemoryStream(_streamManager, "ZipDataCacheProvider", (int)entry.UncompressedSize);
-                    // extract directly into the stream
-                    entry.Extract(stream);
-                    stream.Position = 0;
-                    return stream;
+                    return entry.OpenReader();
                 }
                 catch (ArgumentOutOfRangeException)
                 {
