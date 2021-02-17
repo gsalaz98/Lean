@@ -5,8 +5,12 @@ using System.Linq;
 using Newtonsoft.Json;
 using NodaTime;
 using NUnit.Framework;
+using QuantConnect.Algorithm;
+using QuantConnect.Brokerages;
 using QuantConnect.Data;
+using QuantConnect.Data.Auxiliary;
 using QuantConnect.Data.Market;
+using QuantConnect.Data.UniverseSelection;
 using QuantConnect.Lean.Engine;
 using QuantConnect.Lean.Engine.DataFeeds.Enumerators;
 using QuantConnect.Logging;
@@ -14,7 +18,9 @@ using QuantConnect.Orders;
 using QuantConnect.Orders.Fees;
 using QuantConnect.Packets;
 using QuantConnect.Securities;
+using QuantConnect.Tests.Brokerages;
 using QuantConnect.Tests.Common.Capacity.Strategies;
+using QuantConnect.Tests.Engine.DataFeeds;
 using QuantConnect.ToolBox;
 using QuantConnect.Util;
 
@@ -33,7 +39,21 @@ namespace QuantConnect.Tests.Common.Capacity
         {
             var timeZones = new Dictionary<Symbol, DateTimeZone>();
             var mhdb = MarketHoursDatabase.FromDataFolder();
+            var spdb = SymbolPropertiesDatabase.FromDataFolder();
             var resolution = Resolution.Minute;
+
+            var securityManager = new SecurityManager(new TimeKeeper(DateTime.UtcNow, TimeZones.NewYork, TimeZones.Utc));
+            var cashBook = new CashBook();
+            var subscriptionManager = new SubscriptionManager();
+            subscriptionManager.SetDataManager(new DataManagerStub());
+            var securityService = new SecurityService(
+                cashBook,
+                mhdb,
+                spdb,
+                new QCAlgorithm(),
+                new RegisteredSecurityDataTypesProvider(),
+                new SecurityCacheProvider(new SecurityProvider()));
+
             var orders = JsonConvert.DeserializeObject<BacktestResult>(File.ReadAllText(Path.Combine("Common", "Capacity", "Strategies", $"{strategy}.json")), new OrderJsonConverter())
                 .Orders
                 .Values
@@ -61,13 +81,26 @@ namespace QuantConnect.Tests.Common.Capacity
                 var exchangeTimeZone = mhdb.GetExchangeHours(symbol.ID.Market, symbol, symbol.SecurityType).TimeZone;
                 timeZones[symbol] = exchangeTimeZone;
 
-                var config = new SubscriptionDataConfig(typeof(TradeBar), symbol, resolution, dataTimeZone, exchangeTimeZone, true, false, false);
+                var config = subscriptionManager.Add(symbol, resolution, dataTimeZone, exchangeTimeZone, false, true, false);
+                securityManager.Add(securityService.CreateSecurity(config.Symbol, config));
+           }
 
+            var conversionSecurities = cashBook.EnsureCurrencyDataFeeds(
+                securityManager,
+                subscriptionManager,
+                new DefaultBrokerageModel().DefaultMarkets,
+                new SecurityChanges(securityManager.Values, new Security[0]),
+                securityService);
+
+            var conversionSymbols = conversionSecurities.Select(x => x.Symbol);
+
+            foreach (var config in subscriptionManager.Subscriptions)
+            {
                 foreach (var date in Time.EachDay(start, end))
                 {
-                    if (File.Exists(LeanData.GenerateZipFilePath(Globals.DataFolder, symbol, date, resolution, config.TickType)))
+                    if (File.Exists(LeanData.GenerateZipFilePath(Globals.DataFolder, config.Symbol, date, resolution, config.TickType)))
                     {
-                        readers.Add(new LeanDataReader(config, symbol, resolution, date, Globals.DataFolder).Parse().GetEnumerator());
+                        readers.Add(new LeanDataReader(config, config.Symbol, resolution, date, Globals.DataFolder).Parse().GetEnumerator());
                     }
                 }
             }
