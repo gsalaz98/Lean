@@ -7,7 +7,7 @@ using QuantConnect.Data.Market;
 using QuantConnect.Orders;
 using QuantConnect.Logging;
 
-namespace QuantConnect.Lean.Engine
+namespace QuantConnect.Report
 {
     /// <summary>
     /// Class to facilitate the calculation of the strategy capacity
@@ -33,23 +33,23 @@ namespace QuantConnect.Lean.Engine
         /// Triggered on a new slice update
         /// </summary>
         /// <param name="data"></param>
-        public virtual void OnData(Slice data)
+        public void OnData(Slice data)
         {
             if (data.Time.Month != _previousMonth && _previousMonth != 0)
             {
                 TakeCapacitySnapshot(data.Time);
             }
 
-            foreach (var kvp in data.Bars)
+            foreach (var symbol in data.Keys)
             {
                 SymbolData symbolData;
-                if (!_portfolio.TryGetValue(kvp.Key, out symbolData))
+                if (!_portfolio.TryGetValue(symbol, out symbolData))
                 {
-                    symbolData = new SymbolData(_timeZones[kvp.Key]);
-                    _portfolio[kvp.Key] = symbolData;
+                    symbolData = new SymbolData(symbol, _timeZones[symbol]);
+                    _portfolio[symbol] = symbolData;
                 }
 
-                symbolData.OnData(kvp.Value);
+                symbolData.OnData(data);
             }
 
             _previousMonth = data.Time.Month;
@@ -59,14 +59,14 @@ namespace QuantConnect.Lean.Engine
         /// Triggered on a new order event
         /// </summary>
         /// <param name="orderEvent">Order event</param>
-        public virtual void OnOrderEvent(OrderEvent orderEvent)
+        public void OnOrderEvent(OrderEvent orderEvent)
         {
             var symbol = orderEvent.Symbol;
 
             SymbolData symbolData;
             if (!_portfolio.TryGetValue(symbol, out symbolData))
             {
-                symbolData = new SymbolData(_timeZones[symbol]);
+                symbolData = new SymbolData(symbol, _timeZones[symbol]);
                 _portfolio[symbol] = symbolData;
             }
 
@@ -88,18 +88,12 @@ namespace QuantConnect.Lean.Engine
                 .Where(kvp => kvp.Value.TradedBetweenSnapshots)
                 .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.AbsoluteTradingDollarVolume / totalAbsoluteSymbolDollarVolume);
 
-            Log.Trace($"Total Absolute Dollar Vol. By Symbol: {string.Join("", symbolByPercentageOfAbsoluteDollarVolume.Select(kvp => "\n    " + kvp.Key + ":: " + kvp.Value.ToStringInvariant()))}\n");
-            //Log.Trace($"Total Average Capacity By Symbol: {string.Join("", _portfolio.Select(kvp => "\n    " + kvp.Key + ":: " + kvp.Value.AverageCapacity.ToStringInvariant()))}\n");
-
             var minimumMarketVolume = _portfolio
                 .Where(kvp => kvp.Value.TradedBetweenSnapshots)
                 .OrderBy(kvp => kvp.Value.AverageCapacity)
                 .FirstOrDefault();
 
-            Log.Trace($"Minimum Symbol Average Capacity: {minimumMarketVolume.Key} :: {minimumMarketVolume.Value.AverageCapacity}");
-
             Capacity.Add(new ChartPoint(time, (minimumMarketVolume.Value.AverageCapacity) / symbolByPercentageOfAbsoluteDollarVolume[minimumMarketVolume.Key]));
-
             ResetData();
         }
 
@@ -113,9 +107,11 @@ namespace QuantConnect.Lean.Engine
 
         private class SymbolData
         {
+            private Symbol _symbol;
             private TradeBar _previousBar;
+            private QuoteBar _previousQuoteBar;
             private OrderEvent _previousTrade;
-            public decimal AverageCapacity => (_marketCapacityDollarVolume / TradeCount) * 0.10m;
+            public decimal AverageCapacity => (_marketCapacityDollarVolume / TradeCount) * 0.20m;
 
             private DateTime _timeout;
             private double _fastTradingVolumeDiscountFactor;
@@ -128,8 +124,9 @@ namespace QuantConnect.Lean.Engine
             public decimal AbsoluteTradingDollarVolume { get; private set; }
             private decimal _marketCapacityDollarVolume;
 
-            public SymbolData(DateTimeZone timeZone)
+            public SymbolData(Symbol symbol, DateTimeZone timeZone)
             {
+                _symbol = symbol;
                 _timeZone = timeZone;
                 _fastTradingVolumeDiscountFactor = 1;
             }
@@ -146,7 +143,7 @@ namespace QuantConnect.Lean.Engine
                     ? 6000000 / _averageVolume
                     : 10;
 
-                var timeoutMinutes = k > 60 ? 60 : (int)Math.Max(1, (double)k);
+                var timeoutMinutes = k > 60 ? 60 : (int)Math.Max(5, (double)k);
 
                 // To reduce the capacity of high frequency strategies, we scale down the
                 // volume captured on each bar proportional to the trades per day.
@@ -159,26 +156,52 @@ namespace QuantConnect.Lean.Engine
                 _previousTrade = orderEvent;
             }
 
-            public void OnData(TradeBar bar)
+            public void OnData(Slice data)
             {
-                var absoluteMarketDollarVolume = bar.Close * bar.Volume;
-                if (_previousBar == null)
+                var bar = data.Bars.FirstOrDefault(x => x.Key == _symbol).Value;
+                var quote = data.QuoteBars.FirstOrDefault(x => x.Key == _symbol).Value;
+
+                if (bar != null)
                 {
+                    var absoluteMarketDollarVolume = bar.Close * bar.Volume;
+                    if (_previousBar == null)
+                    {
+                        _previousBar = bar;
+                        _averageVolume = absoluteMarketDollarVolume;
+
+                        return;
+                    }
+
+                    // If we have an illiquid stock, we will get bars that might not be continuous
+                    _averageVolume = (bar.Close * (bar.Volume + _previousBar.Volume)) / (decimal)(bar.EndTime - _previousBar.Time).TotalMinutes;
+
+                    if (bar.EndTime <= _timeout)
+                    {
+                        _marketCapacityDollarVolume += absoluteMarketDollarVolume * (decimal)_fastTradingVolumeDiscountFactor;
+                    }
+
                     _previousBar = bar;
-                    _averageVolume = bar.Volume;
-
-                    return;
                 }
 
-                // If we have an illiquid stock, we will get bars that might not be continuous
-                _averageVolume = (bar.Volume + _previousBar.Volume) / (decimal)(bar.EndTime - _previousBar.EndTime).TotalMinutes;
-
-                if (bar.EndTime <= _timeout)
+                if (quote != null)
                 {
-                    _marketCapacityDollarVolume += absoluteMarketDollarVolume * (decimal)_fastTradingVolumeDiscountFactor;
-                }
+                    var bidDepth = quote.LastBidSize;
+                    var askDepth = quote.LastAskSize;
 
-                _previousBar = bar;
+                    var bidSideMarketCapacity = bidDepth * quote.Bid?.Close ?? _previousQuoteBar?.Bid?.Close ?? _previousBar?.Close;
+                    var askSideMarketCapacity = askDepth * quote.Ask?.Close ?? _previousQuoteBar?.Ask?.Close ?? _previousBar?.Close;
+
+                    if (bidSideMarketCapacity != null && quote.EndTime <= _timeout)
+                    {
+                        _marketCapacityDollarVolume += bidSideMarketCapacity.Value;
+                    }
+                    if (askSideMarketCapacity != null && quote.EndTime <= _timeout)
+                    {
+                        _marketCapacityDollarVolume += askSideMarketCapacity.Value;
+                    }
+
+                    _previousQuoteBar = quote;
+                }
             }
 
             public void Reset()
