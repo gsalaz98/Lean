@@ -318,31 +318,40 @@
     <None Update="TestData\spy_arima.csv">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Common\Capacity\example_strategy.json">
+    <None Update="Report\Capacity\Strategies\BeastVsPenny.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Common\Capacity\symbols.json">
+    <None Update="Report\Capacity\Strategies\EmaPortfolioRebalance100.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Common\Capacity\Strategies\BeastVsPenny.json">
+    <None Update="Report\Capacity\Strategies\IntradayMinuteScalping.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Common\Capacity\Strategies\EmaPortfolioRebalance100.json">
+    <None Update="Report\Capacity\Strategies\IntradayMinuteScalpingBTCETH.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Common\Capacity\Strategies\MonthlyRebalanceDaily.json">
+    <None Update="Report\Capacity\Strategies\MonthlyRebalanceDaily.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Common\Capacity\Strategies\MonthlyRebalanceHourly.json">
+    <None Update="Report\Capacity\Strategies\MonthlyRebalanceHourly.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Common\Capacity\Strategies\SpyBondPortfolioRebalance.json">
+    <None Update="Report\Capacity\Strategies\SpyBondPortfolioRebalance.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Common\Capacity\Strategies\IntradayMinuteScalping.json">
+    <None Update="Report\Capacity\Strategies\IntradayMinuteScalpingEURUSD.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Common\Capacity\Strategies\IntradayMinuteScalpingBTCETH.json">
+    <None Update="Report\Capacity\Strategies\IntradayMinuteScalpingGBPJPY.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Report\Capacity\Strategies\IntradayMinuteScalpingTRYJPY.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Report\Capacity\Strategies\IntradayMinuteScalpingFuturesES.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Report\Capacity\Strategies\CheeseMilkHourlyRebalance.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
