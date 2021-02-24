@@ -89,7 +89,7 @@ namespace QuantConnect.Report
             _mhdb = MarketHoursDatabase.FromDataFolder();
             _spdb = SymbolPropertiesDatabase.FromDataFolder();
 
-            _snapshotPeriod = Resolution.Daily.ToTimeSpan();
+            _snapshotPeriod = Resolution.Minute.ToTimeSpan();
 
             _mapFileCache = new Dictionary<Symbol, MapFile>();
             _mapFileResolver = Composer.Instance.GetExportedValueByTypeName<IMapFileProvider>(Config.Get("map-file-provider", "LocalDiskMapFileProvider"))
@@ -115,7 +115,7 @@ namespace QuantConnect.Report
             Initialize(result);
 
             var orders = result?.Orders?.Values
-                .Where(o => (o.Status == OrderStatus.Filled || o.Status == OrderStatus.PartiallyFilled))
+                .Where(o => (o.Status == OrderStatus.Filled || o.Status == OrderStatus.PartiallyFilled))// && DateTime.UtcNow - o.Time <= TimeSpan.FromDays(365))
                 .OrderBy(o => o.LastFillTime ?? o.Time)
                 .ToList();
 
@@ -183,7 +183,7 @@ namespace QuantConnect.Report
                 return;
             }
 
-            Log.Trace($"StrategyCapacity.TakeCapacitySnapshot(): Taking capacity snapshot for date: {time:yyyy-MM-dd}");
+            Log.Trace($"StrategyCapacity.TakeCapacitySnapshot(): Taking capacity snapshot for date: {time:yyyy-MM-dd HH:mm:ss}");
 
             var equityPoints = _equity.Where(kvp => kvp.Key <= time).LastOrDefault();
             var totalEquity = (decimal)equityPoints.Value;
@@ -193,13 +193,13 @@ namespace QuantConnect.Report
             }
 
             var smallestCapacityAsset = _symbolData.Values
-                .Where(s => s.TradedBetweenSnapshots)
+                .Where(s => s.TotalHoldingsInDollars != 0)
                 .OrderBy(s => s.MarketCapacityDollarVolume)
                 .First();
 
             var capacity = smallestCapacityAsset.MarketCapacityDollarVolume / (Math.Abs(smallestCapacityAsset.TotalHoldingsInDollars) / totalEquity);
 
-            csv.AddRange(_symbolData.Where(s => s.Value.TotalHoldingsInDollars != 0).Select(kvp => string.Join(",", time.ToStringInvariant("yyyy-MM-dd"), kvp.Key.ToString(), kvp.Value.MarketCapacityDollarVolume.ToStringInvariant(), kvp.Value.AbsoluteTradingDollarVolume.ToStringInvariant(), totalEquity.ToStringInvariant(), capacity.ToStringInvariant(), string.Join("|", _symbolData.Where(pvk => pvk.Value.TradedBetweenSnapshots).Select(pvk => pvk.Key.ToString() + " " + ((pvk.Value.TotalHoldingsInDollars / totalEquity) * 100).ToStringInvariant() + "%")))));
+            csv.AddRange(_symbolData.Where(s => s.Value.TotalHoldingsInDollars != 0).Select(kvp => string.Join(",", time.ToStringInvariant("yyyy-MM-dd"), kvp.Key.ToString(), kvp.Value.MarketCapacityDollarVolume.ToStringInvariant(), kvp.Value.AbsoluteTradingDollarVolume.ToStringInvariant(), totalEquity.ToStringInvariant(), capacity.ToStringInvariant(), string.Join("|", _symbolData.Where(pvk => pvk.Value.TotalHoldingsInDollars != 0).Select(pvk => pvk.Key.ToString() + " " + ((pvk.Value.TotalHoldingsInDollars / totalEquity) * 100).ToStringInvariant() + "%")))));
             Capacity.Add(new ChartPoint(time, capacity));
 
             //var totalAbsoluteSymbolDollarVolume = _symbolData.Values
@@ -466,6 +466,7 @@ namespace QuantConnect.Report
             private QuoteBar _previousQuoteBar;
             private OrderEvent _previousTrade;
             private CashBook _cashBook;
+            private SymbolProperties _symbolProperties;
 
             private DateTime _timeout;
             private double _fastTradingVolumeDiscountFactor;
@@ -530,7 +531,8 @@ namespace QuantConnect.Report
                 _orderEvents = orderEvents.GetEnumerator();
                 _fastTradingVolumeScalingFactor = (double)fastTradingVolumeScalingFactor;
                 _percentageOfMinuteDollarVolume = percentageOfMinuteDollarVolume;
-                _quoteCurrency = spdb.GetSymbolProperties(symbol.ID.Market, symbol, symbol.SecurityType, "USD").QuoteCurrency;
+                _symbolProperties = spdb.GetSymbolProperties(symbol.ID.Market, symbol, symbol.SecurityType, "USD");
+                _quoteCurrency = _symbolProperties.QuoteCurrency;
                 _cashBook = cashBook;
             }
 
@@ -542,8 +544,8 @@ namespace QuantConnect.Report
                 orderEvent.FillPrice = _cashBook.ConvertToAccountCurrency(orderEvent.FillPrice, _quoteCurrency);
 
                 TradedBetweenSnapshots = true;
-                AbsoluteTradingDollarVolume += orderEvent.FillPrice * orderEvent.AbsoluteFillQuantity;
-                TotalHoldingsInDollars += orderEvent.FillPrice * orderEvent.FillQuantity;
+                AbsoluteTradingDollarVolume += orderEvent.FillPrice * orderEvent.AbsoluteFillQuantity * _symbolProperties.ContractMultiplier;
+                TotalHoldingsInDollars += orderEvent.FillPrice * orderEvent.FillQuantity * _symbolProperties.ContractMultiplier;
                 TradeCount++;
 
                 // Use 6000000 as the maximum bound for trading volume in a single minute.
@@ -620,16 +622,6 @@ namespace QuantConnect.Report
 
                     MarketCapacityDollarVolume += absoluteMarketDollarVolume * (decimal)_fastTradingVolumeDiscountFactor;
                 }
-
-                //if (_orderEvents.Current == null)
-                //{
-                //    _orderEvents.MoveNext();
-                //}
-                //while (!_orderEventsFinished && _orderEvents.Current != null && _orderEvents.Current.UtcTime <= endTimeUtc)
-                //{
-                //    OnOrderEvent(_orderEvents.Current);
-                //    _orderEventsFinished = !_orderEvents.MoveNext();
-                //}
 
                 _previousBar = bar;
             }
