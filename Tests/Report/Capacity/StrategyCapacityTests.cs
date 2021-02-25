@@ -25,7 +25,7 @@ namespace QuantConnect.Tests.Report.Capacity
 {
     /// <summary>
     /// </summary>
-    [TestFixture, Category("TravisExclude"), Ignore("Requires a ton of data to run these tests that doesn't exist in the repo")]
+    [TestFixture, Category("TravisExclude")]//, Ignore("Requires a ton of data to run these tests that doesn't exist in the repo")]
 
     public class StrategyCapacityTests
     {
@@ -48,6 +48,7 @@ namespace QuantConnect.Tests.Report.Capacity
 
             capacityReportElement.Render();
 
+            Assert.IsNotNull(capacityReportElement.Result);
             Assert.AreEqual(expectedCapacity, (double)(decimal)capacityReportElement.Result);
         }
     }

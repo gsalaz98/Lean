@@ -53,17 +53,15 @@ namespace QuantConnect.Report
 
         private Result _result;
         private SortedList<DateTime, double> _equity;
-        private int _previousMonth;
         private Dictionary<Symbol, SymbolData> _symbolData;
         private Dictionary<Symbol, MapFile> _mapFileCache;
         private SubscriptionManager _subscriptionManager;
         private SecurityManager _securityManager;
         private SecurityService _securityService;
         private MapFileResolver _mapFileResolver;
+        private IFactorFileProvider _factorFileProvider;
         private SymbolPropertiesDatabase _spdb;
         private MarketHoursDatabase _mhdb;
-        private DateTime _previousSnapshot;
-        private TimeSpan _snapshotPeriod;
         private CashBook _cashBook;
         private List<string> csv = new List<string>();
 
@@ -89,11 +87,10 @@ namespace QuantConnect.Report
             _mhdb = MarketHoursDatabase.FromDataFolder();
             _spdb = SymbolPropertiesDatabase.FromDataFolder();
 
-            _snapshotPeriod = Resolution.Minute.ToTimeSpan();
-
+            var mapFileProvider = Composer.Instance.GetExportedValueByTypeName<IMapFileProvider>(Config.Get("map-file-provider", "LocalDiskMapFileProvider"));
             _mapFileCache = new Dictionary<Symbol, MapFile>();
-            _mapFileResolver = Composer.Instance.GetExportedValueByTypeName<IMapFileProvider>(Config.Get("map-file-provider", "LocalDiskMapFileProvider"))
-                .Get("usa");
+            _mapFileResolver = mapFileProvider.Get("usa");
+            _factorFileProvider = Composer.Instance.GetExportedValueByTypeName<IFactorFileProvider>(Config.Get("factor-file-provider", "LocalDiskFactorFileProvider"));
 
             _securityService = new SecurityService(
                 _cashBook,
@@ -129,11 +126,9 @@ namespace QuantConnect.Report
             // Add a buffer of 1 day so that orders placed in the last trading day are snapshotted if the month changes.
             var end = (orders[orders.Count - 1].LastFillTime ?? orders[orders.Count - 1].Time).AddDays(1);
 
-            _previousSnapshot = start;
-
             Log.Trace($"StrategyCapacity.Estimate(): Creating estimate for date range: {start:yyyy-MM-dd} until: {end:yyyy-MM-dd}");
 
-            SetupDataSubscriptions(orders);
+            SetupDataSubscriptions(orders, start);
 
             var configs = _cashBook.EnsureCurrencyDataFeeds(
                     _securityManager,
@@ -158,14 +153,6 @@ namespace QuantConnect.Report
         /// <param name="data"></param>
         public void OnData(BaseData data)
         {
-            if (data.EndTime >= _previousSnapshot + _snapshotPeriod)
-            {
-                TakeCapacitySnapshot(data.EndTime);
-                _previousSnapshot = data.EndTime;
-
-                ResetData();
-            }
-
             SymbolData symbolData;
             if (!_symbolData.TryGetValue(data.Symbol, out symbolData))
             {
@@ -173,52 +160,36 @@ namespace QuantConnect.Report
             }
 
             symbolData.OnData(data);
-            _previousMonth = data.Time.Month;
         }
 
         public void TakeCapacitySnapshot(DateTime time)
         {
-            if (_symbolData.Values.All(x => !x.TradedBetweenSnapshots))
-            {
-                return;
-            }
-
             Log.Trace($"StrategyCapacity.TakeCapacitySnapshot(): Taking capacity snapshot for date: {time:yyyy-MM-dd HH:mm:ss}");
 
-            var equityPoints = _equity.Where(kvp => kvp.Key <= time).LastOrDefault();
+            var equityPoints = _equity.LastOrDefault(kvp => kvp.Key <= time);
             var totalEquity = (decimal)equityPoints.Value;
             if (equityPoints.Key == default(DateTime))
             {
-                totalEquity = _symbolData.Values.Sum(s => s.AbsoluteTradingDollarVolume);
+                totalEquity = (decimal)_equity.Values.First();
             }
 
             var smallestCapacityAsset = _symbolData.Values
                 .Where(s => s.TotalHoldingsInDollars != 0)
                 .OrderBy(s => s.MarketCapacityDollarVolume)
-                .First();
+                .FirstOrDefault();
+
+            if (smallestCapacityAsset == null)
+            {
+                Log.Trace($"StrategyCapacity.TakeCapacitySnapshot(): Smallest capacity is null, aka no holdings?");
+            }
 
             var capacity = smallestCapacityAsset.MarketCapacityDollarVolume / (Math.Abs(smallestCapacityAsset.TotalHoldingsInDollars) / totalEquity);
 
-            csv.AddRange(_symbolData.Where(s => s.Value.TotalHoldingsInDollars != 0).Select(kvp => string.Join(",", time.ToStringInvariant("yyyy-MM-dd"), kvp.Key.ToString(), kvp.Value.MarketCapacityDollarVolume.ToStringInvariant(), kvp.Value.AbsoluteTradingDollarVolume.ToStringInvariant(), totalEquity.ToStringInvariant(), capacity.ToStringInvariant(), string.Join("|", _symbolData.Where(pvk => pvk.Value.TotalHoldingsInDollars != 0).Select(pvk => pvk.Key.ToString() + " " + ((pvk.Value.TotalHoldingsInDollars / totalEquity) * 100).ToStringInvariant() + "%")))));
+            csv.AddRange(_symbolData.Where(s => s.Value.TotalHoldingsInDollars != 0).Select(kvp => string.Join(",", time.ToStringInvariant("yyyy-MM-dd"), kvp.Key.ToString(), kvp.Value.MarketCapacityDollarVolume.RoundToSignificantDigits(6).ToStringInvariant(), kvp.Value.AbsoluteTradingDollarVolume.RoundToSignificantDigits(6).ToStringInvariant(), totalEquity.RoundToSignificantDigits(6).ToStringInvariant(), capacity.RoundToSignificantDigits(6).ToStringInvariant(), string.Join("|", _symbolData.Where(pvk => pvk.Value.TotalHoldingsInDollars != 0).Select(pvk => pvk.Key.ToString() + " " + ((pvk.Value.TotalHoldingsInDollars / totalEquity) * 100).RoundToSignificantDigits(4).ToStringInvariant() + "%")))));
+            csv.Add("");
+
             Capacity.Add(new ChartPoint(time, capacity));
 
-            //var totalAbsoluteSymbolDollarVolume = _symbolData.Values
-            //    .Sum(x => x.AbsoluteTradingDollarVolume);
-
-            //var symbolByPercentageOfAbsoluteDollarVolume = _symbolData
-            //    .Where(kvp => kvp.Value.TradedBetweenSnapshots)
-            //    .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.AbsoluteTradingDollarVolume / totalAbsoluteSymbolDollarVolume);
-
-            //var minimumMarketVolume = _symbolData
-            //    .Where(kvp => kvp.Value.TradedBetweenSnapshots)
-            //    .OrderBy(kvp => kvp.Value.AverageCapacity)
-            //    .FirstOrDefault();
-
-            //var capacity = minimumMarketVolume.Value.AverageCapacity / symbolByPercentageOfAbsoluteDollarVolume[minimumMarketVolume.Key];
-
-            //Log.Trace($"StrategyCapacity.TakeCapacitySnapshot(): Capacity for date {time:yyyy-MM-dd} is {capacity}");
-
-            //Capacity.Add(new ChartPoint(time, capacity));
             ResetData();
         }
 
@@ -237,7 +208,7 @@ namespace QuantConnect.Report
         /// </summary>
         /// <param name="orders">Orders to load data for</param>
         /// <remarks>We use L1 crypto data because there is much greater depth of crypto books vs. the trading volumes</remarks>
-        private void SetupDataSubscriptions(List<Order> orders)
+        private void SetupDataSubscriptions(List<Order> orders, DateTime start)
         {
             var symbols = LinqExtensions.ToHashSet(orders.Select(x => x.Symbol));
 
@@ -256,12 +227,24 @@ namespace QuantConnect.Report
                 var orderEvents = ToOrderEvents(orders.Where(o => o.Symbol == symbol), exchangeTimeZone)
                     .OrderBy(o => o.UtcTime);
 
+                var factorFile = _factorFileProvider.Get(symbol);
+                MapFile mapFile;
+                if (!_mapFileCache.TryGetValue(symbol, out mapFile))
+                {
+                    mapFile = _mapFileResolver.ResolveMapFile(symbol, type);
+                    _mapFileCache[symbol] = mapFile;
+                }
+
+                var splitEventProvider = new SplitEventProvider();
+                splitEventProvider.Initialize(config, factorFile, mapFile, start);
+
                 _symbolData[symbol] = new SymbolData(
                     symbol,
                     exchangeTimeZone,
                     orderEvents,
                     _cashBook,
                     _spdb,
+                    splitEventProvider,
                     _fastTradingVolumeScalingFactor,
                     _percentageOfMinuteDollarVolume);
             }
@@ -447,6 +430,8 @@ namespace QuantConnect.Report
                     DataToAccountCurrency(data);
                     OnData(data);
                 }
+
+                TakeCapacitySnapshot(date);
             }
 
             return Capacity.LastOrDefault()?.y ?? -1;
@@ -458,41 +443,35 @@ namespace QuantConnect.Report
         private class SymbolData
         {
             private readonly IEnumerator<OrderEvent> _orderEvents;
+            private readonly string _quoteCurrency;
+            private readonly SplitEventProvider _splitEventProvider;
+            private readonly Symbol _symbol;
+
             private bool _orderEventsFinished;
-            private string _quoteCurrency;
-            private decimal _percentageOfMinuteDollarVolume = 0.20m;
-            private Symbol _symbol;
+            private decimal _percentageOfMinuteDollarVolume;
             private TradeBar _previousBar;
-            private QuoteBar _previousQuoteBar;
             private OrderEvent _previousTrade;
-            private CashBook _cashBook;
-            private SymbolProperties _symbolProperties;
+            private readonly CashBook _cashBook;
+            private readonly SymbolProperties _symbolProperties;
+            private decimal _splitFactor = 1m;
 
             private DateTime _timeout;
             private double _fastTradingVolumeDiscountFactor;
             private double _fastTradingVolumeScalingFactor;
             private decimal _averageVolume;
-
-            /// <summary>
-            /// 20% of Total market capacity dollar volume of minutes surrounding after an order. It is penalized by frequency of trading.
-            /// </summary>
-            public decimal AverageCapacity => (MarketCapacityDollarVolume / TradeCount) * _percentageOfMinuteDollarVolume;
+            private decimal _totalQuantityHeld;
+            private decimal _totalAbsoluteQuantityHeld;
 
             /// <summary>
             /// If an order event is encountered between the previous snapshot
             /// and the current snapshot, this will be set to true.
             /// </summary>
-            public bool TradedBetweenSnapshots { get; private set; }
+            private bool _tradedBetweenSnapshots;
 
             /// <summary>
             /// Time zone of the Symbol
             /// </summary>
             public DateTimeZone TimeZone { get; }
-
-            /// <summary>
-            /// Number of trades placed by the algorithm between snapshots
-            /// </summary>
-            public int TradeCount { get; private set; }
 
             /// <summary>
             /// Dollar volume traded by the user between snapshots
@@ -507,7 +486,7 @@ namespace QuantConnect.Report
             /// <summary>
             /// Total amount of stock we're holding in dollars for this Symbol
             /// </summary>
-            public decimal TotalHoldingsInDollars { get; private set; }
+            public decimal TotalHoldingsInDollars => _totalQuantityHeld * (_previousBar?.Close ?? 0) * _symbolProperties.ContractMultiplier;
 
             /// <summary>
             /// Creates an instance of SymbolData, used internally to calculate capacity
@@ -522,6 +501,7 @@ namespace QuantConnect.Report
                 IEnumerable<OrderEvent> orderEvents,
                 CashBook cashBook,
                 SymbolPropertiesDatabase spdb,
+                SplitEventProvider splitEventProvider,
                 decimal fastTradingVolumeScalingFactor,
                 decimal percentageOfMinuteDollarVolume)
             {
@@ -534,6 +514,7 @@ namespace QuantConnect.Report
                 _symbolProperties = spdb.GetSymbolProperties(symbol.ID.Market, symbol, symbol.SecurityType, "USD");
                 _quoteCurrency = _symbolProperties.QuoteCurrency;
                 _cashBook = cashBook;
+                _splitEventProvider = splitEventProvider;
             }
 
             /// <summary>
@@ -543,10 +524,11 @@ namespace QuantConnect.Report
             {
                 orderEvent.FillPrice = _cashBook.ConvertToAccountCurrency(orderEvent.FillPrice, _quoteCurrency);
 
-                TradedBetweenSnapshots = true;
                 AbsoluteTradingDollarVolume += orderEvent.FillPrice * orderEvent.AbsoluteFillQuantity * _symbolProperties.ContractMultiplier;
-                TotalHoldingsInDollars += orderEvent.FillPrice * orderEvent.FillQuantity * _symbolProperties.ContractMultiplier;
-                TradeCount++;
+
+                _tradedBetweenSnapshots = true;
+                _totalQuantityHeld += orderEvent.FillQuantity;
+                _totalAbsoluteQuantityHeld += orderEvent.AbsoluteFillQuantity;
 
                 // Use 6000000 as the maximum bound for trading volume in a single minute.
                 // Any bars that exceed 6 million total volume will be capped to a timeout of five minutes.
@@ -572,7 +554,27 @@ namespace QuantConnect.Report
             /// </summary>
             public void OnData(BaseData data)
             {
-                var resetMarketCapacity = !TradedBetweenSnapshots;
+                Split split = null;
+                if (_previousBar != null && data.EndTime.Date != _previousBar.EndTime)
+                {
+                    split = _splitEventProvider
+                        .GetEvents(new NewTradableDateEventArgs(data.EndTime.Date, data, _symbol, data.Value))
+                        .Cast<Split>()
+                        .FirstOrDefault(s => s.Type == SplitType.SplitOccurred);
+                }
+
+                if (split != null)
+                {
+                    _previousBar.Open *= _splitFactor;
+                    _previousBar.High *= _splitFactor;
+                    _previousBar.Low *= _splitFactor;
+                    _previousBar.Close *= _splitFactor;
+                    _previousBar.Volume /= _splitFactor;
+
+                    _totalQuantityHeld /= _splitFactor;
+                    _averageVolume *= _splitFactor;
+                }
+                var resetMarketCapacity = !_tradedBetweenSnapshots;
                 var endTimeUtc = data.EndTime.ConvertToUtc(TimeZone);
 
                 if (_orderEvents.Current == null)
@@ -601,6 +603,16 @@ namespace QuantConnect.Report
                         (quote.LastBidSize + quote.LastAskSize) / 2);
                 }
 
+                if (split != null)
+                {
+                    // TODO tomorrow: unduplicate this code from above
+                    bar.Open *= _splitFactor;
+                    bar.High *= _splitFactor;
+                    bar.Low *= _splitFactor;
+                    bar.Close *= _splitFactor;
+                    bar.Volume *= _splitFactor;
+                }
+
                 var absoluteMarketDollarVolume = bar.Close * bar.Volume;
                 if (_previousBar == null)
                 {
@@ -617,10 +629,12 @@ namespace QuantConnect.Report
                 {
                     if (resetMarketCapacity)
                     {
+                        // We only reset whenever we have a new trade come in so
+                        // that we maintain consistency of capacity.
                         MarketCapacityDollarVolume = 0;
                     }
 
-                    MarketCapacityDollarVolume += absoluteMarketDollarVolume * (decimal)_fastTradingVolumeDiscountFactor;
+                    MarketCapacityDollarVolume += absoluteMarketDollarVolume * (decimal)_fastTradingVolumeDiscountFactor * _percentageOfMinuteDollarVolume;
                 }
 
                 _previousBar = bar;
@@ -628,10 +642,9 @@ namespace QuantConnect.Report
 
             public void Reset()
             {
-                TradedBetweenSnapshots = false;
-
-                AbsoluteTradingDollarVolume = 0;
-                TradeCount = 0;
+                _tradedBetweenSnapshots = false;
+                _totalQuantityHeld = _totalQuantityHeld;
+                _totalAbsoluteQuantityHeld = 0;
             }
         }
     }
