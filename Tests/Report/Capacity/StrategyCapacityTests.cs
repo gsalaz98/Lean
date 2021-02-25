@@ -41,6 +41,7 @@ namespace QuantConnect.Tests.Report.Capacity
         [TestCase(nameof(CheeseMilkHourlyRebalance), 57000)]
         [TestCase(nameof(IntradayMinuteScalpingFuturesES), 36000000)]
         [TestCase(nameof(EmaPortfolioRebalance100), 2600)]
+        [TestCase(nameof(SplitTestingStrategy), 2000)]
         public void TestCapacity(string strategy, int expectedCapacity)
         {
             var backtest = JsonConvert.DeserializeObject<BacktestResult>(File.ReadAllText(Path.Combine("Report", "Capacity", "Strategies", $"{strategy}.json")), new OrderJsonConverter());
