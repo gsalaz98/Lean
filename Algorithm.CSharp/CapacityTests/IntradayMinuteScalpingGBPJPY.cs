@@ -14,28 +14,41 @@
 */
 
 using System.Collections.Generic;
+using QuantConnect.Data;
+using QuantConnect.Indicators;
 using QuantConnect.Interfaces;
 
 namespace QuantConnect.Algorithm.CSharp
 {
-    public class BeastVsPenny : QCAlgorithm, IRegressionAlgorithmDefinition
+    public class IntradayMinuteScalpingGBPJPY : QCAlgorithm, IRegressionAlgorithmDefinition
     {
-        private Symbol _spy;
+        private Symbol _gbpjpy;
+        private ExponentialMovingAverage _fast;
+        private ExponentialMovingAverage _slow;
+
 
         public override void Initialize()
         {
-            SetStartDate(2020, 1, 1);
-            SetEndDate(2020, 3, 31);
-            SetCash(10000);
+            SetStartDate(2021, 1, 1);
+            SetEndDate(2021, 1, 30);
+            SetCash(100000);
+            SetWarmup(100);
 
-            _spy = AddEquity("SPY", Resolution.Hour).Symbol;
-            var penny = AddEquity("ABUS", Resolution.Hour).Symbol;
+            _gbpjpy = AddForex("GBPJPY", Resolution.Minute, Market.Oanda).Symbol;
+            _fast = EMA(_gbpjpy, 20);
+            _slow = EMA(_gbpjpy, 40);
+        }
 
-            Schedule.On(DateRules.EveryDay(_spy), TimeRules.AfterMarketOpen(_spy, 1, false), () =>
+        public override void OnData(Slice data)
+        {
+            if (Portfolio[_gbpjpy].Quantity <= 0 && _fast > _slow)
             {
-                SetHoldings(_spy, 0.5m);
-                SetHoldings(penny, 0.5m);
-            });
+                SetHoldings(_gbpjpy, 1);
+            }
+            else if (Portfolio[_gbpjpy].Quantity >= 0 && _fast < _slow)
+            {
+                SetHoldings(_gbpjpy, -1);
+            }
         }
 
         /// <summary>
@@ -53,33 +66,33 @@ namespace QuantConnect.Algorithm.CSharp
         /// </summary>
         public Dictionary<string, string> ExpectedStatistics => new Dictionary<string, string>
         {
-            {"Total Trades", "70"},
-            {"Average Win", "0.07%"},
-            {"Average Loss", "-0.51%"},
-            {"Compounding Annual Return", "-89.548%"},
-            {"Drawdown", "49.900%"},
-            {"Expectancy", "-0.514"},
-            {"Net Profit", "-42.920%"},
-            {"Sharpe Ratio", "-0.797"},
-            {"Probabilistic Sharpe Ratio", "9.019%"},
-            {"Loss Rate", "57%"},
-            {"Win Rate", "43%"},
-            {"Profit-Loss Ratio", "0.13"},
-            {"Alpha", "-0.24"},
-            {"Beta", "1.101"},
-            {"Annual Standard Deviation", "1.031"},
-            {"Annual Variance", "1.063"},
-            {"Information Ratio", "-0.351"},
-            {"Tracking Error", "0.836"},
-            {"Treynor Ratio", "-0.747"},
-            {"Total Fees", "$81.45"},
+            {"Total Trades", "735"},
+            {"Average Win", "0.08%"},
+            {"Average Loss", "-0.05%"},
+            {"Compounding Annual Return", "-93.946%"},
+            {"Drawdown", "19.900%"},
+            {"Expectancy", "-0.592"},
+            {"Net Profit", "-19.794%"},
+            {"Sharpe Ratio", "-10.054"},
+            {"Probabilistic Sharpe Ratio", "0%"},
+            {"Loss Rate", "84%"},
+            {"Win Rate", "16%"},
+            {"Profit-Loss Ratio", "1.56"},
+            {"Alpha", "-0.895"},
+            {"Beta", "0.068"},
+            {"Annual Standard Deviation", "0.09"},
+            {"Annual Variance", "0.008"},
+            {"Information Ratio", "-4.929"},
+            {"Tracking Error", "0.164"},
+            {"Treynor Ratio", "-13.276"},
+            {"Total Fees", "$0.00"},
             {"Estimated Strategy Capacity", "$0"},
-            {"Fitness Score", "0.01"},
+            {"Fitness Score", "0.049"},
             {"Kelly Criterion Estimate", "0"},
             {"Kelly Criterion Probability Value", "0"},
-            {"Sortino Ratio", "-1.284"},
-            {"Return Over Maximum Drawdown", "-1.789"},
-            {"Portfolio Turnover", "0.038"},
+            {"Sortino Ratio", "-10.846"},
+            {"Return Over Maximum Drawdown", "-4.904"},
+            {"Portfolio Turnover", "58.921"},
             {"Total Insights Generated", "0"},
             {"Total Insights Closed", "0"},
             {"Total Insights Analysis Completed", "0"},
@@ -93,7 +106,7 @@ namespace QuantConnect.Algorithm.CSharp
             {"Mean Population Magnitude", "0%"},
             {"Rolling Averaged Population Direction", "0%"},
             {"Rolling Averaged Population Magnitude", "0%"},
-            {"OrderListHash", "67c9083f604ed16fb68481e7c26878dc"}
+            {"OrderListHash", "66f04c9622ab242993c8ce951418e6d9"}
         };
     }
 }
