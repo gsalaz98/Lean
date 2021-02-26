@@ -561,8 +561,6 @@ namespace QuantConnect.Report
                 // We don't apply splits to order events since they're already adjusted for the split price
                 orderEvent.FillPrice = _cashBook.ConvertToAccountCurrency(orderEvent.FillPrice, _quoteCurrency);
 
-                AbsoluteTradingDollarVolume += orderEvent.FillPrice * orderEvent.AbsoluteFillQuantity * _symbolProperties.ContractMultiplier;
-
                 _tradedBetweenSnapshots = true;
                 _totalQuantityHeld += orderEvent.FillQuantity;
 
