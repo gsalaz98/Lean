@@ -19,55 +19,23 @@ using System.Collections.Generic;
 using System.Linq;
 using QuantConnect.Interfaces;
 using QuantConnect.Orders;
+using QuantConnect.Securities;
 
 namespace QuantConnect.Lean.Engine.Results
 {
     public class CapacityEstimate
     {
         private readonly IAlgorithm _algorithm;
-        private readonly Dictionary<Symbol, SymbolCapacity> _capacityBySymbol;
+        private readonly Dictionary<Symbol, SymbolCapacity> CapacityBySymbol;
         private List<SymbolCapacity> _monitoredSymbolCapacity;
         private HashSet<SymbolCapacity> _monitoredSymbolCapacitySet;
-        private DateTime _nextSnapshotTime;
-        private decimal _capacity;
+        private DateTime _nextSnapshotDate;
+        private TimeSpan _snapshotPeriod;
 
         /// <summary>
         /// The total capacity of the strategy at a point in time
         /// </summary>
-        public decimal Capacity
-        {
-            get
-            {
-                if (_algorithm.UtcTime > _nextSnapshotTime && _capacityBySymbol.Count != 0)
-                {
-                    _nextSnapshotTime = _algorithm.UtcTime.AddMonths(1);
-
-                    var totalPortfolioValue = _algorithm.Portfolio.TotalPortfolioValue;
-                    var totalSaleVolume = _capacityBySymbol.Values
-                        .Sum(s => s.SaleVolume);
-
-                    if (totalSaleVolume == 0 || totalPortfolioValue == 0)
-                    {
-                        return _capacity;
-                    }
-
-                    var smallestAsset = _capacityBySymbol.Values
-                        .OrderBy(c => c.MarketCapacityDollarVolume)
-                        .First();
-
-                    var percentageOfSaleVolume = smallestAsset.SaleVolume / totalSaleVolume;
-                    var percentageOfHoldings = smallestAsset.TotalHoldingsInDollars / totalPortfolioValue;
-
-                    var scalingFactor = Math.Max(percentageOfSaleVolume, percentageOfHoldings);
-
-                    _capacity = scalingFactor == 0
-                        ? _capacity
-                        : smallestAsset.MarketCapacityDollarVolume / scalingFactor;
-                }
-
-                return _capacity;
-            }
-        }
+        public decimal Capacity { get; private set; }
 
         /// <summary>
         /// Initializes an instance of the class.
@@ -76,9 +44,11 @@ namespace QuantConnect.Lean.Engine.Results
         public CapacityEstimate(IAlgorithm algorithm)
         {
             _algorithm = algorithm;
-            _capacityBySymbol = new Dictionary<Symbol, SymbolCapacity>();
+            CapacityBySymbol = new Dictionary<Symbol, SymbolCapacity>();
             _monitoredSymbolCapacity = new List<SymbolCapacity>();
             _monitoredSymbolCapacitySet = new HashSet<SymbolCapacity>();
+            _snapshotPeriod = TimeSpan.FromDays(7);
+            _nextSnapshotDate = _algorithm.StartDate + _snapshotPeriod;
         }
 
         /// <summary>
@@ -88,10 +58,10 @@ namespace QuantConnect.Lean.Engine.Results
         public void OnOrderEvent(OrderEvent orderEvent)
         {
             SymbolCapacity symbolCapacity;
-            if (!_capacityBySymbol.TryGetValue(orderEvent.Symbol, out symbolCapacity))
+            if (!CapacityBySymbol.TryGetValue(orderEvent.Symbol, out symbolCapacity))
             {
                 symbolCapacity = new SymbolCapacity(_algorithm, orderEvent.Symbol);
-                _capacityBySymbol[orderEvent.Symbol] = symbolCapacity;
+                CapacityBySymbol[orderEvent.Symbol] = symbolCapacity;
             }
 
             symbolCapacity.OnOrderEvent(orderEvent);
@@ -106,6 +76,11 @@ namespace QuantConnect.Lean.Engine.Results
 
         public void UpdateMarketCapacity()
         {
+            if (_monitoredSymbolCapacity.Count == 0)
+            {
+                return;
+            }
+
             for (var i = _monitoredSymbolCapacity.Count - 1; i >= 0; --i)
             {
                 var capacity = _monitoredSymbolCapacity[i];
@@ -113,6 +88,69 @@ namespace QuantConnect.Lean.Engine.Results
                 {
                     _monitoredSymbolCapacity.RemoveAt(i);
                     _monitoredSymbolCapacitySet.Remove(capacity);
+                }
+            }
+
+            var utcDate = _algorithm.UtcTime.Date;
+            if (utcDate >= _nextSnapshotDate && CapacityBySymbol.Count != 0)
+            {
+                var delistings = CapacityBySymbol.Values
+                    .Where(s => s.Security.IsDelisted)
+                    .ToList();
+
+                foreach (var delisted in delistings)
+                {
+                    CapacityBySymbol.Remove(delisted.Security.Symbol);
+                    _monitoredSymbolCapacity.Remove(delisted);
+                    _monitoredSymbolCapacitySet.Remove(delisted);
+                }
+
+                _nextSnapshotDate = utcDate + _snapshotPeriod;
+
+                var totalPortfolioValue = _algorithm.Portfolio.TotalPortfolioValue;
+                var totalSaleVolume = CapacityBySymbol.Values
+                    .Sum(s => s.SaleVolume);
+
+                if (totalPortfolioValue == 0)
+                {
+                    return;
+                }
+
+                var smallestAsset = CapacityBySymbol.Values
+                    .OrderBy(c => c.MarketCapacityDollarVolume)
+                    .First();
+
+                var days = (decimal)_snapshotPeriod.TotalDays;
+
+                // When there is no trading, rely on the portfolio holdings
+                var percentageOfSaleVolume = totalSaleVolume != 0
+                    ? smallestAsset.SaleVolume / totalSaleVolume
+                    : 0;
+
+                var buyingPowerUsed = smallestAsset.Security.MarginModel.GetReservedBuyingPowerForPosition(new ReservedBuyingPowerForPositionParameters(smallestAsset.Security))
+                    .AbsoluteUsedBuyingPower * smallestAsset.Security.Leverage;
+
+                var percentageOfHoldings = buyingPowerUsed / totalPortfolioValue;
+
+                var scalingFactor = Math.Max(percentageOfSaleVolume, percentageOfHoldings);
+                var dailyMarketCapacityDollarVolume = smallestAsset.MarketCapacityDollarVolume / days;
+
+                var newCapacity = scalingFactor == 0
+                    ? Capacity
+                    : dailyMarketCapacityDollarVolume / scalingFactor;
+
+                if (Capacity == 0)
+                {
+                    Capacity = newCapacity;
+                }
+                else
+                {
+                    Capacity = (0.33m * newCapacity) + (Capacity * 0.66m);
+                }
+
+                foreach (var symbolCapacity in CapacityBySymbol.Values)
+                {
+                    symbolCapacity.Reset();
                 }
             }
         }

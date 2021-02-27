@@ -15,10 +15,8 @@
 */
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using QuantConnect.Data.Market;
-using QuantConnect.Indicators;
 using QuantConnect.Interfaces;
 using QuantConnect.Orders;
 using QuantConnect.Securities;
@@ -27,101 +25,181 @@ namespace QuantConnect.Lean.Engine.Results
 {
     internal class SymbolCapacity
     {
+        /// <summary>
+        /// An estimate of how much volume the FX market trades per minute
+        /// </summary>
         private const decimal _forexMinuteVolume = 25000000m;
+        private const decimal _fastTradingVolumeScalingFactor = 2m;
 
         private readonly IAlgorithm _algorithm;
         private readonly Symbol _symbol;
         private readonly SecurityHolding _holding;
-        private readonly Security _security;
 
         private decimal _previousVolume;
         private DateTime? _previousTime;
 
-        private decimal _averageVolume;
+        private decimal _averageDollarVolume;
+        private decimal _marketCapacityDollarVolume;
+        private bool _resetMarketCapacityDollarVolume;
+        private decimal _fastTradingVolumeDiscountFactor;
         private OrderEvent _previousOrderEvent;
+        private TradeBar _previousBar;
+        private Resolution _resolution;
 
-        public DateTime Timeout { get; private set; }
+        public Security Security { get; }
 
+        private decimal _resolutionScaleFactor
+        {
+            get
+            {
+                switch (_resolution)
+                {
+                    case Resolution.Daily:
+                        return 0.02m;
 
+                    case Resolution.Hour:
+                        return 0.05m;
+
+                    case Resolution.Minute:
+                        return 0.20m;
+
+                    case Resolution.Tick:
+                    case Resolution.Second:
+                        return 0.50m;
+
+                    default:
+                        return 1m;
+                }
+            }
+        }
         public decimal SaleVolume { get; private set; }
 
-        public decimal MarketCapacityDollarVolume { get; private set; }
+        public decimal MarketCapacityDollarVolume => _marketCapacityDollarVolume * _resolutionScaleFactor;
 
         public decimal TotalHoldingsInDollars => _holding.HoldingsValue;
 
         public SymbolCapacity(IAlgorithm algorithm, Symbol symbol)
         {
             _algorithm = algorithm;
-            _security = _algorithm.Securities[symbol];
+            Security = _algorithm.Securities[symbol];
             _symbol = symbol;
             _holding = _algorithm.Portfolio[_symbol];
+
+            var resolution = Security.Subscriptions
+                .Where(s => !s.IsInternalFeed)
+                .OrderBy(s => s.Resolution)
+                .FirstOrDefault()?
+                .Resolution;
+
+            _resolution = resolution == null || resolution == Resolution.Tick
+                ? Resolution.Second
+                : resolution.Value;
         }
 
         public void OnOrderEvent(OrderEvent orderEvent)
         {
-            var saleVolume = orderEvent.FillPrice * orderEvent.AbsoluteFillQuantity * _security.SymbolProperties.ContractMultiplier;
-            if (orderEvent.UtcTime.Date != _previousOrderEvent?.UtcTime.Date)
+            SaleVolume += Security.QuoteCurrency.ConversionRate * orderEvent.FillPrice * orderEvent.AbsoluteFillQuantity * Security.SymbolProperties.ContractMultiplier;
+
+            // To reduce the capacity of high frequency strategies, we scale down the
+            // volume captured on each bar proportional to the trades per day.
+            // Default to -1 day for the first order to not reduce the volume of the first order.
+            _fastTradingVolumeDiscountFactor = _fastTradingVolumeScalingFactor * ((decimal)((orderEvent.UtcTime - (_previousOrderEvent?.UtcTime ?? orderEvent.UtcTime.AddDays(-1))).TotalMinutes) / 390m);
+            _fastTradingVolumeDiscountFactor = _fastTradingVolumeDiscountFactor > 1 ? 1 : Math.Max(0.20m, _fastTradingVolumeDiscountFactor);
+
+            if (_resetMarketCapacityDollarVolume)
             {
-                SaleVolume = saleVolume;
+                _marketCapacityDollarVolume = 0;
+                _resetMarketCapacityDollarVolume = false;
             }
-            else
+
+            _previousOrderEvent = orderEvent;
+        }
+
+        private bool IncludeMarketVolume()
+        {
+            if (_previousOrderEvent == null)
             {
-                SaleVolume += saleVolume;
+                return false;
             }
 
-            var k = _averageVolume != 0
-                ? 6000000 / _averageVolume
-                : 10;
+            var dollarVolumeScaleFactor = 6000000;
+            DateTime timeout;
+            decimal k;
 
-            var timeoutMinutes = k > 120 ? 120 : (int)Math.Max(5, (double)k);
+            switch (_resolution)
+            {
+                case Resolution.Tick:
+                case Resolution.Second:
+                    dollarVolumeScaleFactor = dollarVolumeScaleFactor / 60;
+                    k = _averageDollarVolume != 0
+                        ? dollarVolumeScaleFactor / _averageDollarVolume
+                        : 10;
 
-            Timeout = _algorithm.UtcTime.AddMinutes(timeoutMinutes);
+                    var timeoutPeriod = k > 120 ? 120 : (int)Math.Max(5, (double)k);
+                    timeout = _previousOrderEvent.UtcTime.AddMinutes(timeoutPeriod);
+                    break;
+
+                case Resolution.Minute:
+                    k = _averageDollarVolume != 0
+                        ? dollarVolumeScaleFactor / _averageDollarVolume
+                        : 10;
+
+                    var timeoutMinutes = k > 120 ? 120 : (int)Math.Max(1, (double)k);
+                    timeout = _previousOrderEvent.UtcTime.AddMinutes(timeoutMinutes);
+                    break;
+
+                case Resolution.Hour:
+                    return _algorithm.UtcTime == _previousOrderEvent.UtcTime.RoundUp(_resolution.ToTimeSpan());
+
+                case Resolution.Daily:
+                    // At the end of a daily bar, the EndTime is the next day.
+                    // Increment the order by one day to match it
+                    return _algorithm.UtcTime.Date == _previousOrderEvent.UtcTime.RoundUp(_resolution.ToTimeSpan());
+
+                default:
+                    timeout = _previousOrderEvent.UtcTime.AddHours(1);
+                    break;
+            }
+
+            return _algorithm.UtcTime <= timeout;
         }
 
         public bool UpdateMarketCapacity()
         {
             var bar = GetBar();
-            if (bar == null)
+            if (bar == null || bar.Volume == 0)
             {
                 return false;
             }
 
-            var utcTime = _algorithm.UtcTime;
-            var volume = Volume(bar);
-            var timeBetweenBars = (decimal)(utcTime - (_previousTime ?? utcTime)).TotalMinutes;
+            _previousBar = bar;
 
+            var utcTime = _algorithm.UtcTime;
+            var conversionRate = Security.QuoteCurrency.ConversionRate;
+            var timeBetweenBars = (decimal)(utcTime - (_previousTime ?? utcTime)).TotalMinutes;
 
             if (_previousTime == null || timeBetweenBars == 0)
             {
                 _previousTime = utcTime;
-                _previousVolume = volume;
-                _averageVolume = bar.Close * volume;
-
-                return false;
+                _previousVolume = bar.Volume;
+                _averageDollarVolume = conversionRate * bar.Close * bar.Volume;
             }
-
-            _averageVolume = (bar.Close * (volume + _previousVolume)) / timeBetweenBars;
+            else
+            {
+                _averageDollarVolume = ((bar.Close * conversionRate) * (bar.Volume + _previousVolume)) / timeBetweenBars;
+            }
 
             _previousTime = utcTime;
-            _previousVolume = volume;
+            _previousVolume = bar.Volume;
 
-            var beforeTimeout = utcTime <= Timeout;
-            if (beforeTimeout)
+            var includeMarketVolume = IncludeMarketVolume();
+            if (includeMarketVolume)
             {
-                MarketCapacityDollarVolume += bar.Close * volume * _security.SymbolProperties.ContractMultiplier * 0.20m;
+                _marketCapacityDollarVolume += bar.Close * _fastTradingVolumeDiscountFactor * bar.Volume * conversionRate * Security.SymbolProperties.ContractMultiplier;
             }
 
-            return !beforeTimeout;
-        }
-
-        private decimal Volume(TradeBar bar)
-        {
-            if (_symbol.SecurityType == SecurityType.Forex)
-            {
-                return _forexMinuteVolume;
-            }
-
-            return bar.Volume;
+            // When we've finished including market volume, signal completed
+            return !includeMarketVolume;
         }
 
         private TradeBar GetBar()
@@ -136,19 +214,28 @@ namespace QuantConnect.Lean.Engine.Results
             if (_algorithm.CurrentSlice.QuoteBars.TryGetValue(_symbol, out quote))
             {
                 // Fake a tradebar for quote data using market depth as a proxy for volume
-                bar = new TradeBar(
+                var volume = (quote.LastBidSize + quote.LastAskSize) / 2;
+                volume = _symbol.SecurityType == SecurityType.Forex
+                    ? _forexMinuteVolume
+                    : volume;
+
+                return new TradeBar(
                     quote.Time,
                     quote.Symbol,
                     quote.Open,
                     quote.High,
                     quote.Low,
                     quote.Close,
-                    (quote.LastBidSize + quote.LastAskSize) / 2);
-
-                return bar;
+                    volume);
             }
 
             return null;
+        }
+
+        public void Reset()
+        {
+            _resetMarketCapacityDollarVolume = true;
+            SaleVolume = 0;
         }
     }
 }
