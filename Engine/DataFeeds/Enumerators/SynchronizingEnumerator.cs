@@ -223,7 +223,8 @@ namespace QuantConnect.Lean.Engine.DataFeeds.Enumerators
                             enumerator = null,
                             frontier = long.MaxValue,
                             nextFrontier = long.MaxValue,
-                            remove = true
+                            remove = true,
+                            retValue = new List<BaseData>()
                         };
                     }
 
@@ -231,7 +232,8 @@ namespace QuantConnect.Lean.Engine.DataFeeds.Enumerators
                     {
                         enumerator = enumerator,
                         frontier = enumerator.Current?.EndTime.Ticks ?? long.MaxValue,
-                        nextFrontier = long.MaxValue
+                        nextFrontier = long.MaxValue,
+                        retValue = new List<BaseData>()
                     };
                 });
             }
@@ -257,24 +259,21 @@ namespace QuantConnect.Lean.Engine.DataFeeds.Enumerators
                 result[i].frontier = minTicks;
             }
 
+            var nextGenTasks = new List<Task<Thingy>>();
             while (result.Length > 0)
             {
-                var nextGenTasks = new List<Task<Thingy>>();
-
                 for (var i = 0; i < result.Length; i++)
                 {
                     var thingy = result[i];
                     nextGenTasks.Add(Task.Run(() =>
                     {
-                        var results = new List<BaseData>();
                         var enumerator = thingy.enumerator;
 
                         while (enumerator.Current == null || enumerator.Current.EndTime.Ticks <= thingy.frontier)
                         {
                             if (enumerator.Current != null)
                             {
-                                thingy.frontier = enumerator.Current.EndTime.Ticks;
-                                results.Add(enumerator.Current);
+                                thingy.retValue.Add(enumerator.Current);
                             }
                             if (!enumerator.MoveNext())
                             {
@@ -287,12 +286,6 @@ namespace QuantConnect.Lean.Engine.DataFeeds.Enumerators
                             }
                         }
 
-                        if (enumerator.Current != null)
-                        {
-                            thingy.nextFrontier = enumerator.Current.EndTime.Ticks;
-                        }
-
-                        thingy.retValue = results;
                         return thingy;
                     }));
                 }
@@ -301,15 +294,22 @@ namespace QuantConnect.Lean.Engine.DataFeeds.Enumerators
                     .GetAwaiter()
                     .GetResult();
 
-                var frontier = long.MaxValue;
+                nextGenTasks.Clear();
+
+                var frontier = DateTime.MaxValue.Ticks;
                 var newLength = 0;
                 for (var i = 0; i < nextGenResults.Length; i++)
                 {
                     var nextGen = nextGenResults[i];
                     var nextFrontier = nextGen.nextFrontier;
+
                     if (nextFrontier < frontier)
                     {
                         frontier = nextFrontier;
+                    }
+                    if (nextGen.enumerator.Current != null)
+                    {
+                        frontier = Math.Min(frontier, nextGen.enumerator.Current.EndTime.Ticks);
                     }
                     if (nextGen.remove)
                     {
@@ -319,7 +319,7 @@ namespace QuantConnect.Lean.Engine.DataFeeds.Enumerators
                     newLength++;
                 }
 
-                if (frontier == long.MaxValue)
+                if (frontier == DateTime.MaxValue.Ticks)
                 {
                     break;
                 }
@@ -330,14 +330,15 @@ namespace QuantConnect.Lean.Engine.DataFeeds.Enumerators
                 for (var i = 0; i < nextGenResults.Length; i++)
                 {
                     var nextGen = nextGenResults[i];
-                    if (nextGen.remove)
-                    {
-                        continue;
-                    }
-
                     foreach (var retValue in nextGen.retValue)
                     {
                         yield return retValue;
+                    }
+
+                    nextGen.retValue.Clear();
+                    if (nextGen.remove)
+                    {
+                        continue;
                     }
 
                     nextGen.frontier = frontier;
@@ -346,8 +347,6 @@ namespace QuantConnect.Lean.Engine.DataFeeds.Enumerators
 
                 result = nextResult;
             }
-
-            yield break;
             /*
             var frontier = new DateTime(ticks);
             var toRemove = new List<IEnumerator<BaseData>>();
