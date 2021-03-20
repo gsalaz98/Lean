@@ -18,6 +18,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using QuantConnect.Data;
 
 namespace QuantConnect.Lean.Engine.DataFeeds.Enumerators
@@ -191,6 +192,15 @@ namespace QuantConnect.Lean.Engine.DataFeeds.Enumerators
             list[index] = t;
         }
 
+        private class Thingy
+        {
+            public IEnumerator<BaseData> enumerator;
+            public long frontier;
+            public bool remove;
+            public long nextFrontier;
+            public List<BaseData> retValue;
+        }
+
         /// <summary>
         /// Brute force implementation for synchronizing the enumerator.
         /// Will remove enumerators returning false to the call to MoveNext.
@@ -198,24 +208,147 @@ namespace QuantConnect.Lean.Engine.DataFeeds.Enumerators
         /// </summary>
         private static IEnumerator<BaseData> GetBruteForceMethod(IEnumerator<BaseData>[] enumerators)
         {
-            var ticks = DateTime.MaxValue.Ticks;
-            var collection = new HashSet<IEnumerator<BaseData>>();
-            foreach (var enumerator in enumerators)
+            var tasks = new Task<Thingy>[enumerators.Length];
+            for (var i = 0; i < enumerators.Length; i++)
             {
-                if (enumerator.MoveNext())
+                var enumerator = enumerators[i];
+
+                tasks[i] = Task.Run(() =>
                 {
-                    if (enumerator.Current != null)
+                    if (!enumerator.MoveNext())
                     {
-                        ticks = Math.Min(ticks, enumerator.Current.EndTime.Ticks);
+                        enumerator.Dispose();
+                        return new Thingy
+                        {
+                            enumerator = null,
+                            frontier = long.MaxValue,
+                            nextFrontier = long.MaxValue,
+                            remove = true
+                        };
                     }
-                    collection.Add(enumerator);
-                }
-                else
+
+                    return new Thingy
+                    {
+                        enumerator = enumerator,
+                        frontier = enumerator.Current?.EndTime.Ticks ?? long.MaxValue,
+                        nextFrontier = long.MaxValue
+                    };
+                });
+            }
+
+            var result = Task.WhenAll(tasks)
+                .GetAwaiter()
+                .GetResult()
+                .Where(t => !t.remove)
+                .ToArray();
+
+            var minTicks = long.MaxValue;
+            for (var i = 0; i < result.Length; i++)
+            {
+                var minTick = result[i].frontier;
+                if (minTick < minTicks)
                 {
-                    enumerator.Dispose();
+                    minTicks = minTick;
                 }
             }
 
+            for (var i = 0; i < result.Length; i++)
+            {
+                result[i].frontier = minTicks;
+            }
+
+            while (result.Length > 0)
+            {
+                var nextGenTasks = new List<Task<Thingy>>();
+
+                for (var i = 0; i < result.Length; i++)
+                {
+                    var thingy = result[i];
+                    nextGenTasks.Add(Task.Run(() =>
+                    {
+                        var results = new List<BaseData>();
+                        var enumerator = thingy.enumerator;
+
+                        while (enumerator.Current == null || enumerator.Current.EndTime.Ticks <= thingy.frontier)
+                        {
+                            if (enumerator.Current != null)
+                            {
+                                thingy.frontier = enumerator.Current.EndTime.Ticks;
+                                results.Add(enumerator.Current);
+                            }
+                            if (!enumerator.MoveNext())
+                            {
+                                thingy.remove = true;
+                                break;
+                            }
+                            if (enumerator.Current == null)
+                            {
+                                break;
+                            }
+                        }
+
+                        if (enumerator.Current != null)
+                        {
+                            thingy.nextFrontier = enumerator.Current.EndTime.Ticks;
+                        }
+
+                        thingy.retValue = results;
+                        return thingy;
+                    }));
+                }
+
+                var nextGenResults = Task.WhenAll(nextGenTasks)
+                    .GetAwaiter()
+                    .GetResult();
+
+                var frontier = long.MaxValue;
+                var newLength = 0;
+                for (var i = 0; i < nextGenResults.Length; i++)
+                {
+                    var nextGen = nextGenResults[i];
+                    var nextFrontier = nextGen.nextFrontier;
+                    if (nextFrontier < frontier)
+                    {
+                        frontier = nextFrontier;
+                    }
+                    if (nextGen.remove)
+                    {
+                        continue;
+                    }
+
+                    newLength++;
+                }
+
+                if (frontier == long.MaxValue)
+                {
+                    break;
+                }
+
+                var nextResult = new Thingy[newLength];
+                var j = 0;
+
+                for (var i = 0; i < nextGenResults.Length; i++)
+                {
+                    var nextGen = nextGenResults[i];
+                    if (nextGen.remove)
+                    {
+                        continue;
+                    }
+
+                    foreach (var retValue in nextGen.retValue)
+                    {
+                        yield return retValue;
+                    }
+
+                    nextGen.frontier = frontier;
+                    nextResult[j++] = nextGen;
+                }
+
+                result = nextResult;
+            }
+
+            yield break;
+            /*
             var frontier = new DateTime(ticks);
             var toRemove = new List<IEnumerator<BaseData>>();
             while (collection.Count > 0)
@@ -261,6 +394,7 @@ namespace QuantConnect.Lean.Engine.DataFeeds.Enumerators
                     break;
                 }
             }
+            */
         }
     }
 }
