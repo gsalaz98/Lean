@@ -20,6 +20,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using QuantConnect.Data;
+using QuantConnect.Logging;
 
 namespace QuantConnect.Lean.Engine.DataFeeds.Enumerators
 {
@@ -199,142 +200,154 @@ namespace QuantConnect.Lean.Engine.DataFeeds.Enumerators
         /// </summary>
         private static IEnumerator<BaseData> GetBruteForceMethod(IEnumerator<BaseData>[] enumerators)
         {
-            //var ticks = DateTime.MaxValue.Ticks;
-            //var collection = new HashSet<IEnumerator<BaseData>>();
-            //foreach (var enumerator in enumerators)
-            //{
-            //    if (enumerator.MoveNext())
-            //    {
-            //        if (enumerator.Current != null)
-            //        {
-            //            ticks = Math.Min(ticks, enumerator.Current.EndTime.Ticks);
-            //        }
-            //        collection.Add(enumerator);
-            //    }
-            //    else
-            //    {
-            //        enumerator.Dispose();
-            //    }
-            //}
-
-            //var frontier = new DateTime(ticks);
-            //var toRemove = new List<IEnumerator<BaseData>>();
-            //while (collection.Count > 0)
-            //{
-            //    var nextFrontierTicks = DateTime.MaxValue.Ticks;
-            //    foreach (var enumerator in collection)
-            //    {
-            //        while (enumerator.Current == null || enumerator.Current.EndTime <= frontier)
-            //        {
-            //            if (enumerator.Current != null)
-            //            {
-            //                yield return enumerator.Current;
-            //            }
-            //            if (!enumerator.MoveNext())
-            //            {
-            //                toRemove.Add(enumerator);
-            //                break;
-            //            }
-            //            if (enumerator.Current == null)
-            //            {
-            //                break;
-            //            }
-            //        }
-
-            //        if (enumerator.Current != null)
-            //        {
-            //            nextFrontierTicks = Math.Min(nextFrontierTicks, enumerator.Current.EndTime.Ticks);
-            //        }
-            //    }
-
-            //    if (toRemove.Count > 0)
-            //    {
-            //        foreach (var enumerator in toRemove)
-            //        {
-            //            collection.Remove(enumerator);
-            //        }
-            //        toRemove.Clear();
-            //    }
-
-            //    frontier = new DateTime(nextFrontierTicks);
-            //    if (frontier == DateTime.MaxValue)
-            //    {
-            //        break;
-            //    }
-            //}
-
-            var nextGen = enumerators.ToList();
-            var tasks = new List<Task<IEnumerator<BaseData>>>();
-            var final = new List<BaseData>();
-            var cached = enumerators
-                .Select(x => new List<BaseData>(64))
-                .ToList();
-
-            while (nextGen.Count != 0)
+            Log.Trace($"Processing {enumerators.Length} enumerators");
+            var original = true;
+            if (original)
             {
-                for (var i = 0; i < nextGen.Count; i++)
+                var ticks = DateTime.MaxValue.Ticks;
+                var collection = new HashSet<IEnumerator<BaseData>>();
+                foreach (var enumerator in enumerators)
                 {
-                    var captured = i;
-                    var enumerator = nextGen[captured];
-                    
-                    tasks.Add(Task.Run(() =>
+                    if (enumerator.MoveNext())
                     {
-                        var iter = 0;
-                        while (iter != 8)
+                        if (enumerator.Current != null)
+                        {
+                            ticks = Math.Min(ticks, enumerator.Current.EndTime.Ticks);
+                        }
+
+                        collection.Add(enumerator);
+                    }
+                    else
+                    {
+                        enumerator.Dispose();
+                    }
+                }
+
+                var frontier = new DateTime(ticks);
+                var toRemove = new List<IEnumerator<BaseData>>();
+                while (collection.Count > 0)
+                {
+                    var nextFrontierTicks = DateTime.MaxValue.Ticks;
+                    foreach (var enumerator in collection)
+                    {
+                        while (enumerator.Current == null || enumerator.Current.EndTime <= frontier)
                         {
                             if (enumerator.Current != null)
                             {
-                                cached[captured].Add(enumerator.Current);
-                                iter++;
+                                yield return enumerator.Current;
                             }
+
                             if (!enumerator.MoveNext())
                             {
-                                return enumerator;
+                                toRemove.Add(enumerator);
+                                break;
                             }
-                            
+
                             if (enumerator.Current == null)
                             {
-                                return null;
+                                break;
                             }
                         }
 
-                        return null;
-                    }));
-                }
-
-                foreach (var enumerator in Task.WhenAll(tasks).SynchronouslyAwaitTaskResult())
-                {
-                    if (enumerator == null)
-                    {
-                        continue;
-                    }
-                    
-                    enumerator.Dispose();
-                    nextGen.Remove(enumerator);
-                }
-
-                foreach (var cache in cached)
-                {
-                    foreach (var entry in cache)
-                    {
-                        final.Add(entry);
+                        if (enumerator.Current != null)
+                        {
+                            nextFrontierTicks = Math.Min(nextFrontierTicks, enumerator.Current.EndTime.Ticks);
+                        }
                     }
 
-                    cache.Clear();
-                }
+                    if (toRemove.Count > 0)
+                    {
+                        foreach (var enumerator in toRemove)
+                        {
+                            collection.Remove(enumerator);
+                        }
 
-                if (final.Count == 0)
-                {
-                    break;
+                        toRemove.Clear();
+                    }
+
+                    frontier = new DateTime(nextFrontierTicks);
+                    if (frontier == DateTime.MaxValue)
+                    {
+                        break;
+                    }
                 }
-                
-                foreach (var dataPoint in final.OrderBy(b => b.EndTime))
+            }
+            else
+            {
+                var nextGen = enumerators.ToList();
+                var tasks = new List<Task<IEnumerator<BaseData>>>();
+                var final = new List<BaseData>();
+                var cached = enumerators
+                    .Select(x => new List<BaseData>(64))
+                    .ToList();
+
+                while (nextGen.Count != 0)
                 {
-                    yield return dataPoint;
+                    for (var i = 0; i < nextGen.Count; i++)
+                    {
+                        var captured = i;
+                        var enumerator = nextGen[captured];
+
+                        tasks.Add(Task.Run(() =>
+                        {
+                            var iter = 0;
+                            while (iter != 8)
+                            {
+                                if (enumerator.Current != null)
+                                {
+                                    cached[captured].Add(enumerator.Current);
+                                    iter++;
+                                }
+
+                                if (!enumerator.MoveNext())
+                                {
+                                    return enumerator;
+                                }
+
+                                if (enumerator.Current == null)
+                                {
+                                    return null;
+                                }
+                            }
+
+                            return null;
+                        }));
+                    }
+
+                    foreach (var enumerator in Task.WhenAll(tasks).SynchronouslyAwaitTaskResult())
+                    {
+                        if (enumerator == null)
+                        {
+                            continue;
+                        }
+
+                        enumerator.Dispose();
+                        nextGen.Remove(enumerator);
+                    }
+
+                    foreach (var cache in cached)
+                    {
+                        foreach (var entry in cache)
+                        {
+                            final.Add(entry);
+                        }
+
+                        cache.Clear();
+                    }
+
+                    if (final.Count == 0)
+                    {
+                        break;
+                    }
+
+                    foreach (var dataPoint in final.OrderBy(b => b.EndTime))
+                    {
+                        yield return dataPoint;
+                    }
+
+                    final.Clear();
+                    tasks.Clear();
                 }
-                
-                final.Clear();
-                tasks.Clear();
             }
         }
     }

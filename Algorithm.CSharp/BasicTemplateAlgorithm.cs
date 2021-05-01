@@ -42,8 +42,10 @@ namespace QuantConnect.Algorithm.CSharp
             // Forex, CFD, Equities Resolutions: Tick, Second, Minute, Hour, Daily.
             // Futures Resolution: Tick, Second, Minute
             // Options Resolution: Minute Only.
-            var a = AddFuture("ES", Resolution.Tick);
-	    a.SetFilter(0, 1000);
+            var a = AddFuture("ES", Resolution.Minute, Market.CME);
+	    a.SetFilter(0, 10000);
+
+	    AddFutureOption(a.Symbol, filter => filter);
 	}
 
         /// <summary>
