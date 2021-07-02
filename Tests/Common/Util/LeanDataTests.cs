@@ -202,7 +202,6 @@ namespace QuantConnect.Tests.Common.Util
         [TestCase("Data/option/u sa/minute/aapl/20140606_trade_american.zip", true, SecurityType.Option)]
         [TestCase("../Data/equity/usa/daily/aapl.zip", true, SecurityType.Equity)]
         [TestCase("Data/cfd/oanda/minute/bcousd/20160101_trade.zip", true, SecurityType.Cfd)]
-        [TestCase("Data\\alternative\\estimize\\consensus\\aapl.csv", true, SecurityType.Base)]
         [TestCase("../../../Data/option/usa/minute/spy/20200922_quote_american.zip", true, SecurityType.Option)]
         [TestCase("../../../Data/futureoption/comex/minute/og/20200428/20200105_quote_american.zip", true, SecurityType.FutureOption)]
         public void TryParseSecurityType(string path, bool result, SecurityType expectedSecurityType)
@@ -299,26 +298,6 @@ namespace QuantConnect.Tests.Common.Util
             Assert.AreEqual(resolution, Resolution.Minute);
             Assert.AreEqual(symbol.ID.Symbol.ToLowerInvariant(), "bcousd");
             Assert.AreEqual(date.Date, Parse.DateTime("2016-01-01").Date);
-        }
-
-        [TestCase("Data\\alternative\\estimize\\consensus\\aapl.csv", "aapl", null)]
-        [TestCase("Data\\alternative\\psychsignal\\aapl\\20161007.zip", "aapl", "2016-10-07")]
-        [TestCase("Data\\alternative\\sec\\aapl\\20161007_8K.zip", "aapl", "2016-10-07")]
-        [TestCase("Data\\alternative\\smartinsider\\intentions\\aapl.tsv", "aapl", null)]
-        [TestCase("Data\\alternative\\trading-economics\\calendar\\fdtr\\20161007.zip", "fdtr", "2016-10-07")]
-        [TestCase("Data\\alternative\\ustreasury\\yieldcurverates.zip", "yieldcurverates", null)]
-        public void AlternativePaths_CanBeParsedCorrectly(string path, string expectedSymbol, string expectedDate)
-        {
-            DateTime date;
-            Symbol symbol;
-            Resolution resolution;
-
-            Assert.IsTrue(LeanData.TryParsePath(path, out symbol, out date, out resolution));
-            Assert.AreEqual(SecurityType.Base, symbol.SecurityType);
-            Assert.AreEqual(Market.USA, symbol.ID.Market);
-            Assert.AreEqual(Resolution.Daily, resolution);
-            Assert.AreEqual(expectedSymbol, symbol.ID.Symbol.ToLowerInvariant());
-            Assert.AreEqual(expectedDate == null ? default(DateTime) : Parse.DateTime(expectedDate).Date, date);
         }
 
         [Test]

@@ -20,7 +20,6 @@ using NUnit.Framework;
 using Python.Runtime;
 using QuantConnect.Data;
 using QuantConnect.Data.Custom;
-using QuantConnect.Data.Custom.Tiingo;
 using QuantConnect.Data.Market;
 using QuantConnect.Indicators;
 using QuantConnect.Python;
@@ -395,62 +394,6 @@ def Test(slice):
                 var quandlSpy = new Quandl { Symbol = Symbols.SPY, Time = DateTime.Now, Value = 10 };
                 var quandlAapl = new Quandl { Symbol = Symbols.AAPL, Time = DateTime.Now, Value = 11 };
                 var slice = new Slice(DateTime.Now, new BaseData[] { quandlSpy, TradeBarAapl, quandlAapl, TradeBarSpy });
-
-                Assert.DoesNotThrow(() => test(new PythonSlice(slice)));
-            }
-        }
-
-        [Test]
-        public void PythonGetCustomData_Iterate_Tiingo()
-        {
-            using (Py.GIL())
-            {
-                dynamic test = PythonEngine.ModuleFromString("testModule",
-                    @"
-from AlgorithmImports import *
-from QuantConnect.Data.Custom.Tiingo import *
-from QuantConnect.Logging import *
-
-def Test(slice):
-    data = slice.Get(TiingoNews)
-    count = 0
-    for singleData in data:
-        Log.Trace(str(singleData))
-        count += 1
-    if count != 2:
-        raise Exception('Unexpected value')").GetAttr("Test");
-                var quandlSpy = new TiingoNews { Symbol = Symbols.SPY, Time = DateTime.Now, Value = 10 };
-                var tradeBarAapl = new TradeBar { Symbol = Symbols.AAPL, Time = DateTime.Now, Value = 9 };
-                var quandlAapl = new TiingoNews { Symbol = Symbols.AAPL, Time = DateTime.Now, Value = 11 };
-                var slice = new Slice(DateTime.Now, new BaseData[] { quandlSpy, tradeBarAapl, quandlAapl });
-
-                Assert.DoesNotThrow(() => test(new PythonSlice(slice)));
-            }
-        }
-
-        [Test]
-        public void PythonGetCustomData_Iterate_Tiingo_Empty()
-        {
-            using (Py.GIL())
-            {
-                dynamic test = PythonEngine.ModuleFromString("testModule",
-                    @"
-from AlgorithmImports import *
-from QuantConnect.Data.Custom.Tiingo import *
-
-def Test(slice):
-    data = slice.Get(TiingoNews)
-    for singleData in data:
-        raise Exception('Unexpected iteration')
-    for singleData in data.Values:
-        raise Exception('Unexpected iteration')
-    data = slice.Get(TiingoNews)
-    for singleData in data:
-        raise Exception('Unexpected iteration')
-    for singleData in data.Values:
-        raise Exception('Unexpected iteration')").GetAttr("Test");
-                var tradeBarAapl = new TradeBar { Symbol = Symbols.AAPL, Time = DateTime.Now, Value = 9 };
-                var slice = new Slice(DateTime.Now, new List<BaseData> { tradeBarAapl });
 
                 Assert.DoesNotThrow(() => test(new PythonSlice(slice)));
             }
@@ -1061,10 +1004,8 @@ def Test(slice, symbol):
         private Slice GetSlice()
         {
             SymbolCache.Clear();
-            var quandlSpy = new TiingoNews { Symbol = Symbols.SPY, Time = DateTime.Now, Value = 10 };
             var tradeBarAapl = new TradeBar { Symbol = Symbols.AAPL, Time = DateTime.Now, Value = 9 };
-            var quandlAapl = new TiingoNews { Symbol = Symbols.AAPL, Time = DateTime.Now, Value = 11 };
-            return new Slice(DateTime.Now, new BaseData[] { quandlSpy, tradeBarAapl, quandlAapl });
+            return new Slice(DateTime.Now, new BaseData[] { tradeBarAapl });
         }
 
         private PythonSlice GetPythonSlice() => new PythonSlice(GetSlice());

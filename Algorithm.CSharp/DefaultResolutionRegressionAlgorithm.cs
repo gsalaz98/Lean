@@ -18,12 +18,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using QuantConnect.Data.Custom;
-using QuantConnect.Data.Custom.CBOE;
-using QuantConnect.Data.Custom.Fred;
-using QuantConnect.Data.Custom.SEC;
 using QuantConnect.Data.Custom.Tiingo;
-using QuantConnect.Data.Custom.USEnergy;
-using QuantConnect.Data.Custom.USTreasury;
 using QuantConnect.Interfaces;
 
 namespace QuantConnect.Algorithm.CSharp
@@ -41,14 +36,7 @@ namespace QuantConnect.Algorithm.CSharp
 
             var types = new[]
             {
-                typeof(SECReport8K),
-                typeof(SECReport10K),
-                typeof(SECReport10Q),
-                typeof(USTreasuryYieldCurveRate),
-                typeof(USEnergy),
-                typeof(CBOE),
                 typeof(TiingoPrice),
-                typeof(Fred)
             };
 
             foreach (var type in types)

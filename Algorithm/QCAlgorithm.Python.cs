@@ -53,7 +53,6 @@ namespace QuantConnect.Algorithm
         /// AddData a new user defined data source, requiring only the minimum config options.
         /// The data is added with a default time zone of NewYork (Eastern Daylight Savings Time).
         /// This method is meant for custom data types that require a ticker, but have no underlying Symbol.
-        /// Examples of data sources that meet this criteria are U.S. Treasury Yield Curve Rates and Trading Economics data
         /// </summary>
         /// <param name="type">Data source type</param>
         /// <param name="ticker">Key/Ticker for data</param>
@@ -90,7 +89,6 @@ namespace QuantConnect.Algorithm
         /// <summary>
         /// AddData a new user defined data source, requiring only the minimum config options.
         /// This method is meant for custom data types that require a ticker, but have no underlying Symbol.
-        /// Examples of data sources that meet this criteria are U.S. Treasury Yield Curve Rates and Trading Economics data
         /// </summary>
         /// <param name="type">Data source type</param>
         /// <param name="ticker">Key/Ticker for data</param>
@@ -132,7 +130,6 @@ namespace QuantConnect.Algorithm
         /// <summary>
         /// AddData a new user defined data source, requiring only the minimum config options.
         /// This method is meant for custom data types that require a ticker, but have no underlying Symbol.
-        /// Examples of data sources that meet this criteria are U.S. Treasury Yield Curve Rates and Trading Economics data
         /// </summary>
         /// <param name="dataType">Data source type</param>
         /// <param name="ticker">Key/Ticker for data</param>
@@ -238,7 +235,6 @@ namespace QuantConnect.Algorithm
         /// <summary>
         /// Adds the provided final Symbol with/without underlying set to the algorithm.
         /// This method is meant for custom data types that require a ticker, but have no underlying Symbol.
-        /// Examples of data sources that meet this criteria are U.S. Treasury Yield Curve Rates and Trading Economics data
         /// </summary>
         /// <param name="dataType">Data source type</param>
         /// <param name="symbol">Final symbol that includes underlying (if any)</param>
